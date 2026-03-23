@@ -3,6 +3,7 @@ import { nanoid } from 'nanoid'
 import { CreateTestSchema, UpdateTestSchema } from '@sentinel/shared'
 import type { Test } from '@sentinel/shared'
 import { pool } from '../db/pool.js'
+import { invalidateCache } from '../executor/compile.js'
 
 export async function testsRoutes(app: FastifyInstance): Promise<void> {
   // POST /tests
@@ -57,6 +58,7 @@ export async function testsRoutes(app: FastifyInstance): Promise<void> {
       values
     )
     if (rows.length === 0) return reply.status(404).send({ error: 'not found' })
+    invalidateCache(req.params.id)
     return reply.send(rows[0])
   })
 
@@ -67,6 +69,7 @@ export async function testsRoutes(app: FastifyInstance): Promise<void> {
       [req.params.id]
     )
     if (result.rowCount === 0) return reply.status(404).send({ error: 'not found' })
+    invalidateCache(req.params.id)
     return reply.status(204).send()
   })
 }
