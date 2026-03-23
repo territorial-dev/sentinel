@@ -60,3 +60,20 @@ AI agents must append an entry here after completing any feature from PROJECT.md
 - Assertion results inserted in one bulk query after execution to avoid per-assertion round-trips.
 
 **Deferred:** Retry logic (`test.retries`); `uses_browser` (Playwright) path; `TestState` update after each run; scheduler integration.
+
+## 2026-03-23 · F-04 · Scheduler
+
+**What was built:** An in-process scheduler that fires each enabled test on its configured interval. On startup it loads all enabled tests from the DB and registers a `setInterval` per test with jitter (`schedule_ms + random(0, schedule_ms * 0.1)`). Concurrency is capped at 10 via `p-limit`; if the limiter is saturated when an interval fires, the run is skipped with a warning log. Tests are kept in sync with CRUD operations via an in-process `EventEmitter` (`testEvents`) whose events are emitted by the CRUD routes.
+
+**Files changed:**
+- `apps/api/src/events.ts` — singleton `EventEmitter` for test lifecycle events
+- `apps/api/src/scheduler/index.ts` — `startScheduler`, `stopScheduler`, `register`, `unregister`
+- `apps/api/src/routes/tests.ts` — emits `test:created`, `test:updated`, `test:deleted` after each mutation
+- `apps/api/src/index.ts` — calls `startScheduler()` after server build, before `listen()`
+
+**Decisions:**
+- Used Node.js built-in `EventEmitter` instead of a third-party pub/sub; no new deps required.
+- `p-limit.activeCount >= CONCURRENCY` check before queuing ensures tasks are dropped (not queued) when at capacity, preventing pile-up.
+- Jitter is applied once per `register()` call (not recalculated each tick) to keep timer management simple while still staggering tests registered at the same moment.
+
+**Deferred:** `TestState` update after each scheduled run; retry logic; `uses_browser` (Playwright) path.
