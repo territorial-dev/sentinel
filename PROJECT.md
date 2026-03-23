@@ -8,7 +8,11 @@ To start a feature: move it (or describe it) into **Current Focus**. When done, 
 
 ## Current Focus
 
-> _Nothing selected yet. Pick a feature from the backlog below and move it here._
+### F-01 · Database Schema & Migrations
+
+Set up the Postgres schema with all tables from the domain model: `tests`, `test_runs`, `assertion_results`, `uptime_daily`, `notification_channels`, `test_state`. Use time-based partitioning on `test_runs` (monthly). Plain SQL migration files in `apps/api/src/db/migrations/`.
+
+**Done when:** running `node migrate.js` against a fresh Postgres instance creates all tables with correct columns, indexes, and constraints.
 
 ---
 

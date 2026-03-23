@@ -65,6 +65,19 @@ These rules are non-negotiable. They exist because of hard constraints (1GB RAM,
 
 ---
 
+## Commits
+
+27. **Use conventional commits** — format: `<type>(<scope>): <description>`. Types: `feat`, `fix`, `refactor`, `test`, `docs`, `chore`, `perf`. Scopes: `api`, `web`, `shared`, `db`, `scheduler`, `executor`, `notifier`.
+28. **One logical change per commit** — do not batch unrelated changes into a single commit.
+
+---
+
+## After Finishing Work
+
+29. **Update `IMPLEMENTATION_LOG.md`** — append an entry with: what was built, files changed, decisions made, anything deferred. See `.metaprompt` for the exact format. This is mandatory, not optional.
+
+---
+
 ## What to Check Before Submitting
 
 - [ ] Does this introduce a new dependency? Is it on the approved list?
@@ -72,3 +85,4 @@ These rules are non-negotiable. They exist because of hard constraints (1GB RAM,
 - [ ] Does this run user code? Is there a timeout?
 - [ ] Does this add a client-side import in Next.js? Is it dynamically imported?
 - [ ] Does this query `test_runs` from a public route? It shouldn't.
+- [ ] Has `IMPLEMENTATION_LOG.md` been updated?

@@ -1,6 +1,8 @@
 You are working on Sentinel — a lightweight synthetic testing and uptime monitoring platform for developers.
 
-Before making changes, read:
+## Before starting work
+
+Read these docs:
 - docs/PRODUCT.md      → what it is, who it's for, non-goals
 - docs/ARCHITECTURE.md → constraints, patterns, approved dependencies
 - docs/DOMAINS.md      → data model, entity rules, ctx API contract
@@ -10,3 +12,32 @@ What to build:   PROJECT.md  ← read "Current Focus" section only; do not self-
 Repo layout:     docs/REPOSITORY.md
 
 Key constraints: 1GB RAM / 0.5 vCPU. Single async process. No ORMs. No Redis. Batch DB writes. Notifications fire-and-forget. Monaco lazy-loaded. Public pages use aggregated data only.
+
+## When committing
+
+Use conventional commits. Format: `<type>(<scope>): <description>`
+
+Types: `feat` · `fix` · `refactor` · `test` · `docs` · `chore` · `perf`
+Scopes (optional): `api` · `web` · `shared` · `db` · `scheduler` · `executor` · `notifier`
+
+Examples:
+- `feat(db): add test_runs partitioned table and migration runner`
+- `fix(executor): enforce timeout via Promise.race on compiled fn`
+- `chore(api): add fastify server bootstrap`
+
+One logical change per commit. Do not batch unrelated changes.
+
+## After finishing work
+
+Append an entry to `IMPLEMENTATION_LOG.md` at the repo root. Format:
+
+```
+## YYYY-MM-DD · <Feature ID> · <Feature name>
+
+**What was built:** 1–3 sentences describing what was implemented.
+**Files changed:** bullet list of key files created or modified.
+**Decisions:** any non-obvious choices made (e.g. why a certain approach was taken).
+**Deferred:** anything explicitly left out or noted for later.
+```
+
+Keep entries factual and brief. This log is read by future AI sessions to avoid re-deriving context.
