@@ -40,3 +40,23 @@ AI agents must append an entry here after completing any feature from PROJECT.md
 - 404 for GET/PATCH/DELETE on unknown IDs; 204 no body on successful DELETE.
 
 **Deferred:** Route-level JSON schema for Fastify serialization (perf optimization); pagination for GET /tests.
+
+## 2026-03-23 · F-03 · Execution Engine
+
+**What was built:** Core test execution engine: a compile-and-cache module (`compile.ts`) that wraps user code via `new Function('ctx', code)` and caches compiled functions per test ID; a `ctx` builder (`ctx.ts`) providing `ctx.http` (undici), `ctx.assert`, `ctx.log`, and `ctx.now()`; a `runTest` function (`run.ts`) that executes the compiled function with `Promise.race` timeout enforcement and persists results to `test_runs` + `assertion_results`. A `POST /tests/:id/run` endpoint exposes manual execution.
+
+**Files changed:**
+- `apps/api/src/executor/compile.ts` — compile cache with invalidation
+- `apps/api/src/executor/ctx.ts` — sandboxed `ctx` object builder
+- `apps/api/src/executor/run.ts` — execution, timeout, DB persistence
+- `apps/api/src/routes/run.ts` — `POST /tests/:id/run` handler
+- `apps/api/src/routes/tests.ts` — calls `invalidateCache` on PATCH and DELETE
+- `apps/api/src/server.ts` — registers `runRoutes`
+
+**Decisions:**
+- Timeout uses a plain `Promise.race` against a `setTimeout` rejection — no extra dependency.
+- `ctx.assert` throws on failure so the executor catches it as `status: 'fail'`; the throw message is preserved as `error_message`.
+- Timeout vs non-timeout errors distinguished by checking if the message starts with "Timed out after", keeping the sentinel string in one place.
+- Assertion results inserted in one bulk query after execution to avoid per-assertion round-trips.
+
+**Deferred:** Retry logic (`test.retries`); `uses_browser` (Playwright) path; `TestState` update after each run; scheduler integration.
