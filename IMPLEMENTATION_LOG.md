@@ -23,3 +23,20 @@ AI agents must append an entry here after completing any feature from PROJECT.md
 - Monthly partitions are created via a `DO` block at apply-time so filenames are calendar-correct without hardcoding dates.
 
 **Deferred:** Logic to create new monthly partitions automatically (needed for F-06 daily aggregation job).
+
+## 2026-03-23 · F-02 · API — Test CRUD
+
+**What was built:** Five REST endpoints (`POST /tests`, `GET /tests`, `GET /tests/:id`, `PATCH /tests/:id`, `DELETE /tests/:id`) on a Fastify v5 server. Input validation uses existing Zod schemas from `@sentinel/shared`. All DB access is raw SQL via a `pg.Pool` singleton. IDs generated with `nanoid`.
+
+**Files changed:**
+- `apps/api/src/db/pool.ts` — pg Pool singleton (max 5 connections)
+- `apps/api/src/routes/tests.ts` — all five route handlers
+- `apps/api/src/server.ts` — Fastify instance with route plugin registration
+- `apps/api/src/index.ts` — entry point that starts the server on port 3000
+
+**Decisions:**
+- PATCH builds a dynamic SET clause from Zod-parsed keys (field names are never raw user input, safe to interpolate); also sets `updated_at = NOW()` on each update.
+- 400 returned for both schema violations (via `safeParse`) and empty PATCH bodies.
+- 404 for GET/PATCH/DELETE on unknown IDs; 204 no body on successful DELETE.
+
+**Deferred:** Route-level JSON schema for Fastify serialization (perf optimization); pagination for GET /tests.
