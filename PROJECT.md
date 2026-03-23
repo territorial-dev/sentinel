@@ -8,17 +8,13 @@ To start a feature: move it (or describe it) into **Current Focus**. When done, 
 
 ## Current Focus
 
-### F-01 · Database Schema & Migrations
-
-Set up the Postgres schema with all tables from the domain model: `tests`, `test_runs`, `assertion_results`, `uptime_daily`, `notification_channels`, `test_state`. Use time-based partitioning on `test_runs` (monthly). Plain SQL migration files in `apps/api/src/db/migrations/`.
-
-**Done when:** running `node migrate.js` against a fresh Postgres instance creates all tables with correct columns, indexes, and constraints.
+_None — F-02 complete. Pick next feature from Milestone 1._
 
 ---
 
 ## Milestone 1 — Core Engine (MVP)
 
-### F-01 · Database Schema & Migrations
+### ✅ F-01 · Database Schema & Migrations
 
 Set up the Postgres schema with all tables from the domain model: `tests`, `test_runs`, `assertion_results`, `uptime_daily`, `notification_channels`, `test_state`. Use time-based partitioning on `test_runs` (monthly). Plain SQL migration files in `apps/api/src/db/migrations/`.
 
@@ -26,7 +22,7 @@ Set up the Postgres schema with all tables from the domain model: `tests`, `test
 
 ---
 
-### F-02 · API — Test CRUD
+### ✅ F-02 · API — Test CRUD
 
 `POST /tests`, `GET /tests`, `GET /tests/:id`, `PATCH /tests/:id`, `DELETE /tests/:id`. Validates input with Zod schemas from `@sentinel/shared`. Writes to/reads from Postgres via raw SQL. Returns typed JSON.
 

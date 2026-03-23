@@ -8,6 +8,8 @@
   },
   "scripts": {
     "dev": "pnpm --parallel -r dev",
+    "dev:api": "pnpm --filter @sentinel/api dev",
+    "migrate": "pnpm --filter @sentinel/api migrate",
     "build": "pnpm -r build",
     "lint": "pnpm -r lint",
     "typecheck": "pnpm -r typecheck"
