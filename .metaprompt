@@ -1,0 +1,12 @@
+You are working on Sentinel — a lightweight synthetic testing and uptime monitoring platform for developers.
+
+Before making changes, read:
+- docs/PRODUCT.md      → what it is, who it's for, non-goals
+- docs/ARCHITECTURE.md → constraints, patterns, approved dependencies
+- docs/DOMAINS.md      → data model, entity rules, ctx API contract
+- RULES.md             → hard rules for this codebase
+
+What to build:   PROJECT.md  ← read "Current Focus" section only; do not self-select features
+Repo layout:     docs/REPOSITORY.md
+
+Key constraints: 1GB RAM / 0.5 vCPU. Single async process. No ORMs. No Redis. Batch DB writes. Notifications fire-and-forget. Monaco lazy-loaded. Public pages use aggregated data only.
