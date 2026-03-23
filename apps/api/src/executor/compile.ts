@@ -1,4 +1,4 @@
-type CompiledFn = (ctx: unknown) => unknown
+type CompiledFn = (ctx: unknown) => Promise<unknown>
 
 interface CacheEntry {
   code: string
@@ -7,13 +7,17 @@ interface CacheEntry {
 
 const cache = new Map<string, CacheEntry>()
 
+// eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+const AsyncFunction = Object.getPrototypeOf(async function () {}).constructor as new (
+  ...args: string[]
+) => CompiledFn
+
 export function getCompiledFn(testId: string, code: string): CompiledFn {
   const entry = cache.get(testId)
   if (entry && entry.code === code) {
     return entry.fn
   }
-  // eslint-disable-next-line no-new-func
-  const fn = new Function('ctx', code) as CompiledFn
+  const fn = new AsyncFunction('ctx', code)
   cache.set(testId, { code, fn })
   return fn
 }
