@@ -2,6 +2,7 @@ import type { FastifyInstance } from 'fastify'
 import type { Test } from '@sentinel/shared'
 import { pool } from '../db/pool.js'
 import { runTest } from '../executor/run.js'
+import { enqueue } from '../db/result-buffer.js'
 
 export async function runRoutes(app: FastifyInstance): Promise<void> {
   // POST /tests/:id/run
@@ -15,6 +16,7 @@ export async function runRoutes(app: FastifyInstance): Promise<void> {
     if (!test.enabled) return reply.status(422).send({ error: 'test is disabled' })
 
     const result = await runTest(test)
+    enqueue(result)
     return reply.send(result)
   })
 }

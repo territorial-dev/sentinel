@@ -2,6 +2,7 @@ import pLimit from 'p-limit'
 import type { Test } from '@sentinel/shared'
 import { pool } from '../db/pool.js'
 import { runTest } from '../executor/run.js'
+import { enqueue } from '../db/result-buffer.js'
 import { testEvents } from '../events.js'
 
 const CONCURRENCY = 10
@@ -19,7 +20,7 @@ function register(test: Test): void {
       console.warn(`scheduler: queue full, skipping test ${test.id}`)
       return
     }
-    limit(() => runTest(test)).catch((err: unknown) => {
+    limit(() => runTest(test).then(enqueue)).catch((err: unknown) => {
       console.error(`scheduler: run failed for test ${test.id}`, err)
     })
   }, jitteredInterval)

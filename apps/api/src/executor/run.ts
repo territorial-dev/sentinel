@@ -1,5 +1,5 @@
 import { nanoid } from 'nanoid'
-import type { TestRun, TestStatus } from '@sentinel/shared'
+import type { TestStatus } from '@sentinel/shared'
 import { pool } from '../db/pool.js'
 import { getCompiledFn } from './compile.js'
 import { buildCtx } from './ctx.js'
@@ -52,13 +52,6 @@ export async function runTest(test: TestInput): Promise<RunResult> {
 
   const finishedAt = new Date()
   const durationMs = Date.now() - startMs
-
-  // Persist test run
-  await pool.query<TestRun>(
-    `INSERT INTO test_runs (id, test_id, started_at, finished_at, status, duration_ms, error_message)
-     VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-    [runId, test.id, startedAt, finishedAt, status, durationMs, errorMessage]
-  )
 
   // Persist assertion results (batch)
   const assertions = getAssertions()
