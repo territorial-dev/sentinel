@@ -8,11 +8,11 @@ To start a feature: move it (or describe it) into **Current Focus**. When done, 
 
 ## Current Focus
 
-### F-05 · Result Persistence
+### F-06 · Daily Aggregation
 
-Buffer `TestRun` rows in memory after each execution. Flush to Postgres in batches (max 100 rows, every 2 seconds) using a single `INSERT`. Update `test_state` row (upsert) after each run. Never write individual rows in a loop.
+A daily cron (midnight UTC) computes `uptime_daily` stats per test from that day's `test_runs`. Upserts one row per `(test_id, date)`. Prunes `test_runs` partitions older than 7 days. Prunes `uptime_daily` rows older than 90 days.
 
-**Done when:** results appear in DB within 3 seconds of execution; 500 concurrent results don't cause connection pool exhaustion.
+**Done when:** after a day of test runs, `uptime_daily` has correct `success_count`, `failure_count`, `avg_latency_ms` for each test.
 
 ---
 
@@ -50,7 +50,7 @@ On startup, register a `setInterval` for each enabled test. Apply jitter (`inter
 
 ---
 
-### F-05 · Result Persistence
+### ✅ F-05 · Result Persistence
 
 Buffer `TestRun` rows in memory after each execution. Flush to Postgres in batches (max 100 rows, every 2 seconds) using a single `INSERT`. Update `test_state` row (upsert) after each run. Never write individual rows in a loop.
 
