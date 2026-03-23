@@ -8,7 +8,11 @@ To start a feature: move it (or describe it) into **Current Focus**. When done, 
 
 ## Current Focus
 
-_None — F-02 complete. Pick next feature from Milestone 1._
+### F-04 · Scheduler
+
+On startup, register a `setInterval` for each enabled test. Apply jitter (`interval + random(0, interval * 0.1)`). Use `p-limit` to cap concurrency at 10 HTTP tests. Skip run if queue is full (log + continue). Reload schedules when tests are created/updated/deleted via in-process event.
+
+**Done when:** 50 tests with 30s intervals all fire on schedule without piling up; a queue-full scenario skips gracefully.
 
 ---
 
@@ -30,7 +34,7 @@ Set up the Postgres schema with all tables from the domain model: `tests`, `test
 
 ---
 
-### F-03 · Execution Engine
+### ✅ F-03 · Execution Engine
 
 Compile user JS code on save via `new Function('ctx', code)` and cache. On execution: build `ctx` object (with `ctx.http` via undici, `ctx.log`, `ctx.now()`), run compiled function, enforce timeout with `Promise.race`. Return `{ status, duration_ms, error_message }`.
 
