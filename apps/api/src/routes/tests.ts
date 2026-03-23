@@ -4,6 +4,7 @@ import { CreateTestSchema, UpdateTestSchema } from '@sentinel/shared'
 import type { Test } from '@sentinel/shared'
 import { pool } from '../db/pool.js'
 import { invalidateCache } from '../executor/compile.js'
+import { testEvents } from '../events.js'
 
 export async function testsRoutes(app: FastifyInstance): Promise<void> {
   // POST /tests
@@ -20,6 +21,7 @@ export async function testsRoutes(app: FastifyInstance): Promise<void> {
        RETURNING *`,
       [id, d.name, d.code, d.schedule_ms, d.timeout_ms, d.retries, d.uses_browser, d.enabled]
     )
+    testEvents.emit('test:created', rows[0])
     return reply.status(201).send(rows[0])
   })
 
@@ -59,6 +61,7 @@ export async function testsRoutes(app: FastifyInstance): Promise<void> {
     )
     if (rows.length === 0) return reply.status(404).send({ error: 'not found' })
     invalidateCache(req.params.id)
+    testEvents.emit('test:updated', rows[0])
     return reply.send(rows[0])
   })
 
@@ -70,6 +73,7 @@ export async function testsRoutes(app: FastifyInstance): Promise<void> {
     )
     if (result.rowCount === 0) return reply.status(404).send({ error: 'not found' })
     invalidateCache(req.params.id)
+    testEvents.emit('test:deleted', req.params.id)
     return reply.status(204).send()
   })
 }
