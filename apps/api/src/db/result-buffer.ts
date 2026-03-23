@@ -73,7 +73,7 @@ async function flushTestState(rows: RunResult[]): Promise<void> {
   const placeholders = deduped.map((r, i) => {
     const b = i * 3
     values.push(r.test_id, r.status, r.finished_at)
-    return `($${b + 1},$${b + 2},$${b + 3})`
+    return `($${b + 1},$${b + 2},$${b + 3}::timestamptz)`
   })
 
   // LEFT JOIN reads existing consecutive_failures so it can be incremented correctly
