@@ -8,11 +8,11 @@ To start a feature: move it (or describe it) into **Current Focus**. When done, 
 
 ## Current Focus
 
-### F-04 · Scheduler
+### F-05 · Result Persistence
 
-On startup, register a `setInterval` for each enabled test. Apply jitter (`interval + random(0, interval * 0.1)`). Use `p-limit` to cap concurrency at 10 HTTP tests. Skip run if queue is full (log + continue). Reload schedules when tests are created/updated/deleted via in-process event.
+Buffer `TestRun` rows in memory after each execution. Flush to Postgres in batches (max 100 rows, every 2 seconds) using a single `INSERT`. Update `test_state` row (upsert) after each run. Never write individual rows in a loop.
 
-**Done when:** 50 tests with 30s intervals all fire on schedule without piling up; a queue-full scenario skips gracefully.
+**Done when:** results appear in DB within 3 seconds of execution; 500 concurrent results don't cause connection pool exhaustion.
 
 ---
 
@@ -42,7 +42,7 @@ Compile user JS code on save via `new Function('ctx', code)` and cache. On execu
 
 ---
 
-### F-04 · Scheduler
+### ✅ F-04 · Scheduler
 
 On startup, register a `setInterval` for each enabled test. Apply jitter (`interval + random(0, interval * 0.1)`). Use `p-limit` to cap concurrency at 10 HTTP tests. Skip run if queue is full (log + continue). Reload schedules when tests are created/updated/deleted via in-process event.
 
