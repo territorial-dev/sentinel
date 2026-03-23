@@ -1,2 +1,4 @@
 node_modules
 conversation.json
+.env
+.env.local
