@@ -42,7 +42,14 @@ export async function startScheduler(): Promise<void> {
     register(test)
   }
 
-  testEvents.on('test:created', (test: Test) => register(test))
+  testEvents.on('test:created', (test: Test) => {
+    register(test)
+    if (test.enabled) {
+      limit(() => runTest(test).then(enqueue)).catch((err: unknown) => {
+        console.error(`scheduler: immediate run failed for test ${test.id}`, err)
+      })
+    }
+  })
   testEvents.on('test:updated', (test: Test) => {
     unregister(test.id)
     if (test.enabled) register(test)
