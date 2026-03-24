@@ -7,7 +7,8 @@ const app = await buildServer()
 await startScheduler()
 startFlusher()
 startAggregator()
-await app.listen({ port: 3000, host: '0.0.0.0' })
+const port = Number(process.env['PORT'] ?? 3001)
+await app.listen({ port, host: '0.0.0.0' })
 
 async function shutdown(): Promise<void> {
   stopScheduler()
