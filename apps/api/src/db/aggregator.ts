@@ -74,8 +74,8 @@ export async function runAggregation(): Promise<void> {
     for (const { relname } of rows) {
       const match = relname.match(/^test_runs_(\d{4})_(\d{2})$/)
       if (!match) continue
-      const year = parseInt(match[1], 10)
-      const month = parseInt(match[2], 10)
+      const year = parseInt(match[1]!, 10)
+      const month = parseInt(match[2]!, 10)
       // month from relname is 1-indexed; using it directly as Date month (0-indexed) gives start of next month
       const partitionEnd = new Date(Date.UTC(year, month, 1))
       if (partitionEnd <= cutoff) {

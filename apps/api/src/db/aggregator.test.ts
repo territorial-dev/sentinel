@@ -33,10 +33,10 @@ describe('runAggregation', () => {
     const params = firstCall![1] as string[]
     expect(params).toHaveLength(2)
     // both should be ISO date strings (YYYY-MM-DD)
-    expect(params[0]).toMatch(/^\d{4}-\d{2}-\d{2}$/)
-    expect(params[1]).toMatch(/^\d{4}-\d{2}-\d{2}$/)
+    expect(params[0]!).toMatch(/^\d{4}-\d{2}-\d{2}$/)
+    expect(params[1]!).toMatch(/^\d{4}-\d{2}-\d{2}$/)
     // yesterday < today
-    expect(params[0] < params[1]).toBe(true)
+    expect(params[0]! < params[1]!).toBe(true)
   })
 
   it('queries pg_class for partition names', async () => {
