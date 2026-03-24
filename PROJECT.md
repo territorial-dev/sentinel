@@ -8,11 +8,12 @@ To start a feature: move it (or describe it) into **Current Focus**. When done, 
 
 ## Current Focus
 
-### F-06 · Daily Aggregation
+### ✅ F-07 · Notifications
 
-A daily cron (midnight UTC) computes `uptime_daily` stats per test from that day's `test_runs`. Upserts one row per `(test_id, date)`. Prunes `test_runs` partitions older than 7 days. Prunes `uptime_daily` rows older than 90 days.
+On each run result, check `test_state` for a state transition (pass→fail, fail→pass). If transitioning to fail: only notify after `consecutive_failures >= threshold` (default 3) and cooldown elapsed (default 5 min). Dispatch to all enabled `notification_channels` for that test (Discord/Slack/webhook) via undici POST. Fire-and-forget — wrap in `try/catch`, never await in execution path.
 
-**Done when:** after a day of test runs, `uptime_daily` has correct `success_count`, `failure_count`, `avg_latency_ms` for each test.
+**Done when:** a test that fails 3 times in a row sends a Discord message; a recovery sends a recovery message; a single flaky failure sends nothing.
+
 
 ---
 
@@ -58,7 +59,7 @@ Buffer `TestRun` rows in memory after each execution. Flush to Postgres in batch
 
 ---
 
-### F-06 · Daily Aggregation
+### ✅ F-06 · Daily Aggregation
 
 A daily cron (midnight UTC) computes `uptime_daily` stats per test from that day's `test_runs`. Upserts one row per `(test_id, date)`. Prunes `test_runs` partitions older than 7 days. Prunes `uptime_daily` rows older than 90 days.
 

@@ -18,6 +18,24 @@ AI agents must append an entry here after completing any feature from PROJECT.md
 
 <!-- entries go here, newest at the bottom -->
 
+## 2026-03-24 · F-07 · Notifications
+
+**What was built:** State-transition-based notification dispatch. After each batch flush, `flushTestState` fetches the previous `last_status` for all affected tests, performs the upsert as before, then fires `triggerNotifications()` (fire-and-forget). The notifier filters for pass→fail and fail→pass transitions, checks `consecutive_failures >= 3` and 5-minute cooldown before dispatching fail alerts, and sends recovery alerts only when a prior fail notification was sent (non-null `last_notification_at`). Payloads are dispatched via undici POST to Discord, Slack, or generic webhook channels; each dispatch is wrapped in try/catch. `last_notification_at` is set to `NOW()` on fail and `NULL` on recovery.
+
+**Files changed:**
+- `apps/api/src/notifier/dispatch.ts` (new) — `triggerNotifications`, transition filtering, threshold/cooldown checks, webhook dispatch
+- `apps/api/src/db/result-buffer.ts` — added prev-state SELECT before upsert; added `triggerNotifications` call after upsert
+- `apps/api/src/db/result-buffer.test.ts` — updated call-count assertions (2→3) and call-index refs (1→2) for the new SELECT
+
+**Decisions:**
+- Prev-state SELECT runs before the upsert (not after) so transition direction is unambiguous without storing old values.
+- `last_notification_at` is updated before dispatching to webhooks to prevent duplicate alerts in case of partial webhook failures.
+- Recovery sends only if `last_notification_at != null` to avoid spurious recovery pings for tests that never crossed the failure threshold.
+- Recovery resets `last_notification_at` to NULL so the next failure cycle starts with a clean cooldown window.
+
+**Deferred:** Per-channel failure threshold or cooldown overrides; notification channel CRUD endpoints (needed by F-10 web editor).
+
+
 ## 2026-03-23 · F-01 · Database Schema & Migrations
 
 **What was built:** Plain SQL migration file creating all six domain tables (`tests`, `test_runs`, `assertion_results`, `uptime_daily`, `notification_channels`, `test_state`) with constraints, indexes, and monthly range partitioning on `test_runs`. A `tsx`-based migration runner tracks applied migrations via a `schema_migrations` table and runs each file in a transaction.

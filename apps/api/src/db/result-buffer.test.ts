@@ -49,10 +49,10 @@ describe('flush', () => {
     expect(mockQuery).not.toHaveBeenCalled()
   })
 
-  it('calls pool.query twice (test_runs then test_state) for one result', async () => {
+  it('calls pool.query three times (test_runs, prev-state select, test_state upsert) for one result', async () => {
     enqueue(makeResult())
     await flush()
-    expect(mockQuery).toHaveBeenCalledTimes(2)
+    expect(mockQuery).toHaveBeenCalledTimes(3)
   })
 
   it('inserts all buffered rows in a single test_runs query', async () => {
@@ -89,8 +89,8 @@ describe('flush', () => {
     mockQuery.mockClear()
     mockQuery.mockResolvedValue({ rows: [] } as never)
     await flush()
-    // test_runs + test_state = 2 queries for the re-queued row
-    expect(mockQuery).toHaveBeenCalledTimes(2)
+    // test_runs + prev-state select + test_state upsert = 3 queries for the re-queued row
+    expect(mockQuery).toHaveBeenCalledTimes(3)
   })
 
   it('prevents concurrent flushes via flushInProgress guard', async () => {
@@ -111,8 +111,8 @@ describe('flush', () => {
     await first
     await second
 
-    // first flush: 2 queries (test_runs + test_state). second: 0 (guarded).
-    expect(mockQuery).toHaveBeenCalledTimes(2)
+    // first flush: 3 queries (test_runs + prev-state select + test_state upsert). second: 0 (guarded).
+    expect(mockQuery).toHaveBeenCalledTimes(3)
   })
 })
 
@@ -135,7 +135,7 @@ describe('flushTestState deduplication', () => {
     enqueue(late)
     await flush()
 
-    const testStateCall = mockQuery.mock.calls[1]
+    const testStateCall = mockQuery.mock.calls[2]
     expect(testStateCall).toBeDefined()
     const params = testStateCall![1] as unknown[]
     // After dedup: 1 row × 3 params = 3 params
@@ -150,7 +150,7 @@ describe('flushTestState deduplication', () => {
     enqueue(makeResult())
     await flush()
 
-    const testStateCall = mockQuery.mock.calls[1]
+    const testStateCall = mockQuery.mock.calls[2]
     const sql = testStateCall![0] as string
     expect(sql).toContain('INSERT INTO test_state')
     expect(sql).toContain('ON CONFLICT (test_id) DO UPDATE')
@@ -187,8 +187,8 @@ describe('startFlusher / stopFlusher', () => {
     startFlusher() // second call should be a no-op
     enqueue(makeResult())
     await vi.advanceTimersByTimeAsync(2000) // drains microtasks too
-    // Only one interval should fire: 2 queries expected (1 flush cycle)
-    expect(mockQuery).toHaveBeenCalledTimes(2)
+    // Only one interval should fire: 3 queries expected (1 flush cycle)
+    expect(mockQuery).toHaveBeenCalledTimes(3)
     stopFlusher()
     vi.useRealTimers()
   })

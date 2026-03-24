@@ -1,5 +1,7 @@
+import type { TestStatus } from '@sentinel/shared'
 import type { RunResult } from '../executor/run.js'
 import { pool } from './pool.js'
+import { triggerNotifications } from '../notifier/dispatch.js'
 
 let buffer: RunResult[] = []
 let flusherTimer: ReturnType<typeof setInterval> | null = null
@@ -69,6 +71,14 @@ async function flushTestState(rows: RunResult[]): Promise<void> {
   }
   const deduped = Array.from(latest.values())
 
+  // Fetch previous statuses for transition detection (F-07)
+  const testIds = deduped.map(r => r.test_id)
+  const prevResult = await pool.query<{ test_id: string; last_status: TestStatus | null }>(
+    `SELECT test_id, last_status FROM test_state WHERE test_id = ANY($1)`,
+    [testIds],
+  )
+  const prevStates = new Map(prevResult.rows.map(r => [r.test_id, r.last_status]))
+
   const values: unknown[] = []
   const placeholders = deduped.map((r, i) => {
     const b = i * 3
@@ -94,5 +104,13 @@ async function flushTestState(rows: RunResult[]): Promise<void> {
        last_run_at          = EXCLUDED.last_run_at`,
     values,
   )
-  // last_notification_at is intentionally excluded — owned by F-07 notifier
+
+  // Fire-and-forget notification checks (F-07)
+  triggerNotifications(
+    deduped.map(r => ({
+      test_id: r.test_id,
+      new_status: r.status,
+      prev_status: prevStates.get(r.test_id) ?? null,
+    })),
+  )
 }
