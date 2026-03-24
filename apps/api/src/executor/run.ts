@@ -2,7 +2,7 @@ import { nanoid } from 'nanoid'
 import type { TestStatus } from '@sentinel/shared'
 import { pool } from '../db/pool.js'
 import { getCompiledFn } from './compile.js'
-import { buildCtx } from './ctx.js'
+import { buildCtx, type BuildCtxOptions } from './ctx.js'
 
 export interface RunResult {
   id: string
@@ -20,7 +20,7 @@ interface TestInput {
   timeout_ms: number
 }
 
-export async function runTest(test: TestInput): Promise<RunResult> {
+export async function runTest(test: TestInput, onLog?: BuildCtxOptions['onLog']): Promise<RunResult> {
   const runId = nanoid()
   const startedAt = new Date()
   const startMs = Date.now()
@@ -29,7 +29,7 @@ export async function runTest(test: TestInput): Promise<RunResult> {
   let errorMessage: string | null = null
 
   const fn = getCompiledFn(test.id, test.code)
-  const { ctx, getAssertions } = buildCtx()
+  const { ctx, getAssertions } = buildCtx(onLog ? { onLog } : undefined)
 
   const timeoutPromise = new Promise<never>((_, reject) =>
     setTimeout(() => reject(new Error(`Timed out after ${test.timeout_ms}ms`)), test.timeout_ms)

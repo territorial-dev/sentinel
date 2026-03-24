@@ -4,6 +4,7 @@ import type { Test } from '@sentinel/shared'
 import { DeleteTestButton } from '../_components/delete-test-button'
 import { RunLatencyChartLoader } from '../_components/run-latency-chart-loader'
 import { RunHistory, type RunRow } from '../_components/run-history'
+import { RunNowPanel } from '../_components/run-now-panel'
 
 export const dynamic = 'force-dynamic'
 
@@ -72,6 +73,7 @@ export default async function TestDetailPage({ params }: { params: Promise<{ id:
             Edit
           </Link>
           <DeleteTestButton testId={id} testName={test.name} />
+          <RunNowPanel testId={id} />
         </div>
       </header>
 

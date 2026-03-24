@@ -31,6 +31,10 @@ interface CtxBundle {
   getAssertions: () => AssertionCapture[]
 }
 
+export interface BuildCtxOptions {
+  onLog?: (message: string) => void
+}
+
 async function doFetch(url: string, init: RequestInit): Promise<HttpResponse> {
   const res = await fetch(url, init)
   const body = await res.text()
@@ -41,7 +45,7 @@ async function doFetch(url: string, init: RequestInit): Promise<HttpResponse> {
   return { status: res.status, body, headers }
 }
 
-export function buildCtx(): CtxBundle {
+export function buildCtx(options?: BuildCtxOptions): CtxBundle {
   const logs: string[] = []
   const assertions: AssertionCapture[] = []
 
@@ -69,6 +73,7 @@ export function buildCtx(): CtxBundle {
     },
     log(message) {
       logs.push(message)
+      options?.onLog?.(message)
     },
     now() {
       return new Date()

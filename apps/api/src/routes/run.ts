@@ -19,4 +19,47 @@ export async function runRoutes(app: FastifyInstance): Promise<void> {
     enqueue(result)
     return reply.send(result)
   })
+
+  // GET /tests/:id/run/stream — SSE: triggers execution and streams ctx.log() in real-time
+  app.get<{ Params: { id: string } }>('/:id/run/stream', async (req, reply) => {
+    const { rows } = await pool.query<Test>(
+      'SELECT * FROM tests WHERE id = $1',
+      [req.params.id]
+    )
+    const test = rows[0]
+
+    reply.hijack()
+    const res = reply.raw
+    res.writeHead(200, {
+      'Content-Type': 'text/event-stream',
+      'Cache-Control': 'no-cache',
+      'Connection': 'keep-alive',
+      'Access-Control-Allow-Origin': '*',
+    })
+
+    function send(event: string, data: unknown): void {
+      res.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`)
+    }
+
+    if (test == null) {
+      send('error', { error: 'not found' })
+      res.end()
+      return
+    }
+    if (!test.enabled) {
+      send('error', { error: 'test is disabled' })
+      res.end()
+      return
+    }
+
+    try {
+      const result = await runTest(test, (message) => send('log', { message }))
+      enqueue(result)
+      send('done', result)
+    } catch (err) {
+      send('error', { error: err instanceof Error ? err.message : 'Run failed' })
+    } finally {
+      res.end()
+    }
+  })
 }
