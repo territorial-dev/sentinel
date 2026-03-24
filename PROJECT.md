@@ -8,12 +8,11 @@ To start a feature: move it (or describe it) into **Current Focus**. When done, 
 
 ## Current Focus
 
-### ✅ F-07 · Notifications
+### F-08 · Prometheus Metrics
 
-On each run result, check `test_state` for a state transition (pass→fail, fail→pass). If transitioning to fail: only notify after `consecutive_failures >= threshold` (default 3) and cooldown elapsed (default 5 min). Dispatch to all enabled `notification_channels` for that test (Discord/Slack/webhook) via undici POST. Fire-and-forget — wrap in `try/catch`, never await in execution path.
+Register with `prom-client`: `sentinel_check_duration_ms` (histogram), `sentinel_check_failures_total` (counter), `sentinel_check_success_total` (counter). Expose at `GET /metrics`. Updated after every test run.
 
-**Done when:** a test that fails 3 times in a row sends a Discord message; a recovery sends a recovery message; a single flaky failure sends nothing.
-
+**Done when:** `curl /metrics` returns valid Prometheus text format with all three metrics.
 
 ---
 
@@ -67,11 +66,11 @@ A daily cron (midnight UTC) computes `uptime_daily` stats per test from that day
 
 ---
 
-### F-07 · Notifications
+### ✅ F-07 · Notifications
 
-On each run result, check `test_state` for a state transition (pass→fail, fail→pass). If transitioning to fail: only notify after `consecutive_failures >= threshold` (default 3) and cooldown elapsed (default 5 min). Dispatch to all enabled `notification_channels` for that test (Discord/Slack/webhook) via undici POST. Fire-and-forget — wrap in `try/catch`, never await in execution path.
+State-transition alerting: pass→fail (after `failure_threshold` consecutive failures and cooldown elapsed) and fail→pass. Dispatches to all enabled `notification_channels` (Discord/Slack/webhook) via undici POST. Fire-and-forget. Rich payloads: failure reason, response time, downtime duration on recovery. Discord uses coloured embeds; Slack uses attachments. `failure_threshold` and `cooldown_ms` are per-test columns (defaults: 3 / 5 min).
 
-**Done when:** a test that fails 3 times in a row sends a Discord message; a recovery sends a recovery message; a single flaky failure sends nothing.
+**Done when:** a test that fails 3 times in a row sends a Discord embed with the error reason; a recovery sends an embed with downtime duration; a single flaky failure sends nothing.
 
 ---
 
