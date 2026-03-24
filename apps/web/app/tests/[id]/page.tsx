@@ -29,6 +29,7 @@ async function getRuns(id: string): Promise<RunRow[]> {
       duration_ms: number
       error_message: string | null
       finished_at: string
+      assertions: Array<{ name: string; passed: boolean; message: string | null }>
     }>
     return rows.map(r => ({
       id: r.id,
@@ -39,6 +40,7 @@ async function getRuns(id: string): Promise<RunRow[]> {
         typeof r.finished_at === 'string'
           ? r.finished_at
           : new Date(r.finished_at as unknown as string).toISOString(),
+      assertions: r.assertions,
     }))
   } catch {
     return []

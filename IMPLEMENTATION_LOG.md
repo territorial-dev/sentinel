@@ -274,3 +274,18 @@ AI agents must append an entry here after completing any feature from PROJECT.md
 **Decisions:** Postgres `CURRENT_DATE` aligns with server UTC for the `uptime_daily` date filter; the 30-day axis is built in JS with `Date.UTC` so it matches that window even if session TZ differed. Any failure on a day marks the square red; all-success days are emerald; no data is zinc.
 
 **Deferred:** None.
+
+---
+
+## 2026-03-24 · F-13 · Named Assertions
+
+**What was built:** Assertion results are now surfaced on the test detail page. `GET /tests/:id/runs` was extended to batch-fetch `assertion_results` for the returned run IDs in a single extra query, grouping them by `test_run_id` and embedding them inline in each run object. The web `RunHistory` component now renders assertion results under each run row: emerald `✓` for passing, red `✗` with optional message for failing. The column header was renamed from "Error" to "Details".
+
+**Files changed:**
+- `apps/api/src/routes/tests.ts` — batch assertion query + inline embed in `GET /:id/runs`
+- `apps/web/app/tests/[id]/page.tsx` — map `assertions` field from API response
+- `apps/web/app/tests/_components/run-history.tsx` — `assertions` in `RunRow`; inline assertion list in `RunRowView`
+
+**Decisions:** Assertions are embedded in the existing runs endpoint (not a separate `GET /:id/runs/:runId/assertions`) to avoid extra per-row round trips from the page. The DB side (`ctx.assert`, `assertion_results` table, batch INSERT in `runTest`) was already complete from F-03.
+
+**Deferred:** None.

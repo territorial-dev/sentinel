@@ -11,6 +11,7 @@ export interface RunRow {
   duration_ms: number
   error_message: string | null
   finished_at: string
+  assertions: Array<{ name: string; passed: boolean; message: string | null }>
 }
 
 function StatusCell({ status }: { status: TestStatus }) {
@@ -68,8 +69,21 @@ function RunRowView({ run }: { run: RunRow }) {
                 </button>
               )}
             </>
-          ) : (
+          ) : run.assertions.length === 0 ? (
             <span className="text-zinc-600">—</span>
+          ) : null}
+          {run.assertions.length > 0 && (
+            <ul className="mt-1 flex flex-col gap-0.5">
+              {run.assertions.map((a, i) => (
+                <li key={i} className={`flex items-start gap-1.5 text-xs ${a.passed ? 'text-emerald-500' : 'text-red-400'}`}>
+                  <span className="shrink-0">{a.passed ? '✓' : '✗'}</span>
+                  <span>
+                    {a.name}
+                    {!a.passed && a.message ? ` — ${a.message}` : ''}
+                  </span>
+                </li>
+              ))}
+            </ul>
           )}
         </div>
       </td>
@@ -90,7 +104,7 @@ export function RunHistory({ runs }: { runs: RunRow[] }) {
             <th className="pb-4 pr-6 font-normal">Time</th>
             <th className="pb-4 pr-6 font-normal">Status</th>
             <th className="pb-4 pr-6 font-normal text-right">Duration</th>
-            <th className="pb-4 font-normal">Error</th>
+            <th className="pb-4 font-normal">Details</th>
           </tr>
         </thead>
         <tbody>
