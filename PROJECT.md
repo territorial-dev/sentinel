@@ -8,12 +8,6 @@ To start a feature: move it (or describe it) into **Current Focus**. When done, 
 
 ## Current Focus
 
-### F-08 · Prometheus Metrics
-
-Register with `prom-client`: `sentinel_check_duration_ms` (histogram), `sentinel_check_failures_total` (counter), `sentinel_check_success_total` (counter). Expose at `GET /metrics`. Updated after every test run.
-
-**Done when:** `curl /metrics` returns valid Prometheus text format with all three metrics.
-
 ---
 
 ## Milestone 1 — Core Engine (MVP)
@@ -74,7 +68,7 @@ State-transition alerting: pass→fail (after `failure_threshold` consecutive fa
 
 ---
 
-### F-08 · Prometheus Metrics
+### ✅ F-08 · Prometheus Metrics
 
 Register with `prom-client`: `sentinel_check_duration_ms` (histogram), `sentinel_check_failures_total` (counter), `sentinel_check_success_total` (counter). Expose at `GET /metrics`. Updated after every test run.
 
@@ -86,6 +80,8 @@ Register with `prom-client`: `sentinel_check_duration_ms` (histogram), `sentinel
 
 Next.js page at `/` (server component). Fetches all tests from the API. Displays a table: test name, status badge (pass/fail/unknown), last run time, 7-day pass rate from `uptime_daily`. No client-side data fetching.
 
+**UI:** Dark background (`zinc-950`). Sparse table — no borders between rows, only subtle row hover. Status badge: colored dot + label (emerald for pass, red for fail, zinc for unknown). 7-day pass rate as a plain percentage — no chart needed here.
+
 **Done when:** the dashboard loads and shows the correct status for each test; page renders without client JS.
 
 ---
@@ -93,6 +89,8 @@ Next.js page at `/` (server component). Fetches all tests from the API. Displays
 ### F-10 · Web — Test Editor
 
 Page at `/tests/new` and `/tests/[id]`. Monaco Editor (dynamically imported, `ssr: false`) for editing JS code. Form fields for name, interval, timeout. On save, calls the API. Basic error display.
+
+**UI:** Two-column layout — left: form fields (name, interval, timeout, enabled toggle); right: Monaco editor taking full remaining height. Monaco configured with dark theme matching app background, Consolas font. Validation errors appear inline below each field, not in a toast. Save button is the only prominent action.
 
 **Done when:** can create a new test with JS code in the editor and have it appear in the dashboard.
 
@@ -102,6 +100,8 @@ Page at `/tests/new` and `/tests/[id]`. Monaco Editor (dynamically imported, `ss
 
 Page at `/tests/[id]`. Shows: last 20 runs with status badge + duration + error message. Link to edit. Delete button with confirmation.
 
+**UI:** Run history as a compact list — each row: timestamp, status dot, duration in ms, error message (truncated, expandable). Delete uses a shadcn `AlertDialog` for confirmation — not a browser `confirm()`. Edit is a plain text link, not a button.
+
 **Done when:** can navigate to a test, see its run history, and delete it.
 
 ---
@@ -109,6 +109,8 @@ Page at `/tests/[id]`. Shows: last 20 runs with status badge + duration + error 
 ### F-12 · Web — Public Status Page
 
 Page at `/status` (no auth). Server-rendered from `uptime_daily` only — no raw `test_runs` queries. Shows each test: name, current status, 30-day uptime %, 30-day daily history bar. Fast static render (ISR, 5-minute revalidation).
+
+**UI:** Centered narrow layout (max-w-2xl). Each test is a card with: name, uptime % in large type, 30-day bar (30 colored squares — emerald/red/zinc per day). No navigation, no sidebar. This page is meant to be embedded or shared — keep it self-contained and load-fast.
 
 **Done when:** `/status` loads without auth, is fast, and shows 30-day history correctly.
 

@@ -89,9 +89,32 @@ pnpm workspaces manage the monorepo.
 - **Test detail**: recent runs, pass/fail history, duration chart
 - **Public status page**: SSG/ISR from `UptimeDaily` only — never queries raw `test_runs`
 
+### Design System
+
+**Aesthetic:** Apple-like — minimal, calm, purposeful. Every pixel earns its place. No decoration, no chrome, no noise.
+
+**Principles:**
+- Negative space is a design element — use it aggressively
+- Typography does the work (size + weight hierarchy) — not color
+- One primary action per screen. Secondary actions recede.
+- Status is communicated via color AND shape (never color alone)
+- Animations: opacity transitions only, 150ms max. No slide-ins. No bounce.
+- Borders are nearly invisible or absent — surfaces differ by background luminance only
+- Error states are calm and specific, not alarming
+
+**Theme:**
+- **Dark mode by default** — `dark` class on `<html>`, no system-preference toggle needed for MVP
+- Background scale: `zinc-950` (page) → `zinc-900` (card) → `zinc-800` (input/hover)
+- Text: `zinc-100` primary, `zinc-400` secondary/muted, `zinc-600` disabled
+- Accent: `emerald-500` for success/pass, `red-500` for failure, `zinc-500` for neutral/unknown
+- Font family: **Consolas, monospace** — used for both UI text and code. Do not mix with a sans-serif UI font.
+
+**Components:** Use **shadcn/ui** (Radix UI headless primitives + Tailwind). Install components individually with `npx shadcn@latest add <component>`. Never wrap shadcn components in additional abstraction layers — edit the generated component file directly if customization is needed.
+
 ### Bundle discipline
 - Monaco is the only large client-side dependency — must be dynamically imported
-- No heavy UI libraries (no MUI, no Chakra) — use Tailwind or plain CSS
+- No heavy UI libraries (no MUI, no Chakra, no Ant Design)
+- shadcn/ui components are code-owned (not a runtime package) — acceptable
 - Public status pages must load fast — no client-side data fetching
 
 ---
@@ -124,10 +147,15 @@ pnpm workspaces manage the monorepo.
 |---------|---------|
 | `next` | Framework |
 | `react` / `react-dom` | UI |
+| `tailwindcss` | Utility-first styling |
+| `@radix-ui/*` | Headless UI primitives (via shadcn) |
+| `class-variance-authority` | Variant styling for shadcn components |
+| `clsx` + `tailwind-merge` | Class merging utilities |
+| `lucide-react` | Icon set (used by shadcn) |
 | `@monaco-editor/react` | Code editor (lazy-loaded) |
 | `zod` | Schema validation (shared) |
 
-**Explicitly banned**: `axios`, `express`, `redis`, `bullmq`, `prisma`, `typeorm`, `sequelize`, `lodash`, `moment`
+**Explicitly banned**: `axios`, `express`, `redis`, `bullmq`, `prisma`, `typeorm`, `sequelize`, `lodash`, `moment`, `@mui/material`, `@chakra-ui/react`, `antd`, `styled-components`
 
 ---
 
