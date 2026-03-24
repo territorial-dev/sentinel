@@ -63,7 +63,7 @@ export default async function TestDetailPage({ params }: { params: Promise<{ id:
         ← back
       </Link>
 
-      <header className="flex flex-wrap items-baseline justify-between gap-4 border-b border-zinc-800 pb-6">
+      <header className="flex flex-wrap items-center justify-between gap-4 border-b border-zinc-800 pb-6">
         <h1 className="text-zinc-100 text-lg tracking-tight">{test.name}</h1>
         <div className="flex items-center gap-6">
           <Link
