@@ -128,6 +128,25 @@ AI agents must append an entry here after completing any feature from PROJECT.md
 
 **Deferred:** `TestState` update after each scheduled run; retry logic; `uses_browser` (Playwright) path.
 
+## 2026-03-24 · F-08 · Prometheus Metrics
+
+**What was built:** Three prom-client metrics registered at startup — `sentinel_check_duration_ms` (histogram), `sentinel_check_failures_total` (counter), `sentinel_check_success_total` (counter) — and exposed at `GET /metrics` in standard Prometheus text format. Metrics are updated after every flush cycle in `result-buffer.ts`.
+
+**Files changed:**
+- `apps/api/src/metrics/index.ts` — new module: metric definitions, `recordTestResult` helper, re-exports `register`
+- `apps/api/src/routes/metrics.ts` — new route: `GET /metrics` returns `register.metrics()` with correct `Content-Type`
+- `apps/api/src/server.ts` — registered `metricsRoutes` without a prefix
+- `apps/api/src/db/result-buffer.ts` — calls `recordTestResult(r.status, r.duration_ms)` for each row after successful DB flush
+
+**Decisions:**
+- Metrics are recorded after DB writes succeed (not fire-and-forget before), so counter values reflect persisted results — a failed flush does not increment metrics.
+- All rows in the flush batch are recorded individually (not deduped), giving accurate histogram observations and counts per test run.
+- Default prom-client registry is used (no custom registry) — standard single-process setup.
+
+**Deferred:** Per-test labels (e.g. `test_id`) were not added to avoid high cardinality; can be opt-in later.
+
+---
+
 ## 2026-03-23 · F-05 · Result Persistence
 
 **What was built:** An in-memory result buffer (`result-buffer.ts`) that accumulates `RunResult` rows after each test execution and flushes them to Postgres in batches — up to 100 rows per flush, triggered every 2 seconds or when the buffer hits 100. A single multi-row `INSERT` writes all `test_runs` at once; a deduplicated multi-row upsert (latest result per `test_id`) updates `test_state`. The direct single-row INSERT was removed from the executor, and graceful shutdown drains the buffer before exit.

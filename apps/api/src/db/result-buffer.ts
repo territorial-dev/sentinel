@@ -2,6 +2,7 @@ import type { TestStatus } from '@sentinel/shared'
 import type { RunResult } from '../executor/run.js'
 import { pool } from './pool.js'
 import { triggerNotifications } from '../notifier/dispatch.js'
+import { recordTestResult } from '../metrics/index.js'
 
 let buffer: RunResult[] = []
 let flusherTimer: ReturnType<typeof setInterval> | null = null
@@ -40,6 +41,9 @@ export async function flush(): Promise<void> {
   try {
     await flushTestRuns(rows)
     await flushTestState(rows)
+    for (const r of rows) {
+      recordTestResult(r.status, r.duration_ms)
+    }
   } catch (err) {
     buffer = [...rows, ...buffer]
     throw err
