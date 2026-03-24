@@ -10,6 +10,8 @@ export interface Test {
   retries: number
   uses_browser: boolean
   enabled: boolean
+  failure_threshold: number
+  cooldown_ms: number
   created_at: Date
   updated_at: Date
 }

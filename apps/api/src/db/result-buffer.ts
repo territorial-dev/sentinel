@@ -111,6 +111,8 @@ async function flushTestState(rows: RunResult[]): Promise<void> {
       test_id: r.test_id,
       new_status: r.status,
       prev_status: prevStates.get(r.test_id) ?? null,
+      error_message: r.error_message,
+      duration_ms: r.duration_ms,
     })),
   )
 }

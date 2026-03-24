@@ -18,6 +18,27 @@ AI agents must append an entry here after completing any feature from PROJECT.md
 
 <!-- entries go here, newest at the bottom -->
 
+## 2026-03-24 · F-07b · Enriched Notifications + Per-Test Config
+
+**What was built:** Upgraded notification payloads to include failure reason (error_message), response time, and downtime duration on recovery. Discord uses coloured embeds (red/green); Slack uses attachments with a colour bar. Per-test `failure_threshold` and `cooldown_ms` columns added to the `tests` table via migration `002_notification_config.sql`, replacing the previous hardcoded constants. The DB query in `runNotifications` now JOINs `tests` to read per-test thresholds. `lastNotifiedAt` is captured before being cleared on recovery so the downtime duration can be computed accurately.
+
+**Files changed:**
+- `apps/api/src/db/migrations/002_notification_config.sql` (new) — ALTER TABLE adds `failure_threshold` and `cooldown_ms`
+- `packages/shared/src/types.ts` — added `failure_threshold`, `cooldown_ms` to `Test`
+- `packages/shared/src/schemas.ts` — added both fields to `CreateTestSchema` / `UpdateTestSchema`
+- `apps/api/src/notifier/dispatch.ts` — rich embeds/attachments, per-test config, downtime calc, `formatDuration` helper
+- `apps/api/src/db/result-buffer.ts` — passes `error_message` and `duration_ms` in `NotificationCandidate`
+
+**Decisions:**
+- `lastNotifiedAt` is passed into `dispatchForTest` as a parameter (captured before the UPDATE clears it) so downtime is correct even though the DB is already updated.
+- Discord uses `embeds[]` (not `content`) for structured fields; Slack uses legacy `attachments` (widely supported, no OAuth needed for incoming webhooks).
+- `formatDuration` produces human-readable strings like "2h 10m", "5m 34s", "8s".
+- Per-test defaults (threshold=3, cooldown=5min) match the previously hardcoded values, so existing behaviour is unchanged for tests that don't override them.
+
+**Deferred:** Notification channel CRUD endpoints (needed for F-10 web editor); quiet hours / escalation policy.
+
+---
+
 ## 2026-03-24 · F-07 · Notifications
 
 **What was built:** State-transition-based notification dispatch. After each batch flush, `flushTestState` fetches the previous `last_status` for all affected tests, performs the upsert as before, then fires `triggerNotifications()` (fire-and-forget). The notifier filters for pass→fail and fail→pass transitions, checks `consecutive_failures >= 3` and 5-minute cooldown before dispatching fail alerts, and sends recovery alerts only when a prior fail notification was sent (non-null `last_notification_at`). Payloads are dispatched via undici POST to Discord, Slack, or generic webhook channels; each dispatch is wrapped in try/catch. `last_notification_at` is set to `NOW()` on fail and `NULL` on recovery.

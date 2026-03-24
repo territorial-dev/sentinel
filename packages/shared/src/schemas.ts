@@ -8,6 +8,8 @@ export const CreateTestSchema = z.object({
   retries: z.number().int().min(0).max(5).default(0),
   uses_browser: z.boolean().default(false),
   enabled: z.boolean().default(true),
+  failure_threshold: z.number().int().min(1).default(3),
+  cooldown_ms: z.number().int().min(0).default(300_000),
 })
 
 export const UpdateTestSchema = CreateTestSchema.partial()

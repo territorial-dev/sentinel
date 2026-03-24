@@ -2,13 +2,12 @@ import { request } from 'undici'
 import type { TestStatus } from '@sentinel/shared'
 import { pool } from '../db/pool.js'
 
-const FAILURE_THRESHOLD = 3
-const COOLDOWN_MS = 5 * 60 * 1000
-
 export interface NotificationCandidate {
   test_id: string
   new_status: TestStatus
   prev_status: TestStatus | null
+  error_message: string | null
+  duration_ms: number
 }
 
 export function triggerNotifications(candidates: NotificationCandidate[]): void {
@@ -30,8 +29,14 @@ async function runNotifications(candidates: NotificationCandidate[]): Promise<vo
     test_id: string
     consecutive_failures: number
     last_notification_at: Date | null
+    failure_threshold: number
+    cooldown_ms: number
   }>(
-    `SELECT test_id, consecutive_failures, last_notification_at FROM test_state WHERE test_id = ANY($1)`,
+    `SELECT ts.test_id, ts.consecutive_failures, ts.last_notification_at,
+            t.failure_threshold, t.cooldown_ms
+     FROM test_state ts
+     JOIN tests t ON t.id = ts.test_id
+     WHERE ts.test_id = ANY($1)`,
     [testIds],
   )
   const stateMap = new Map(stateResult.rows.map(r => [r.test_id, r]))
@@ -40,19 +45,21 @@ async function runNotifications(candidates: NotificationCandidate[]): Promise<vo
     const state = stateMap.get(candidate.test_id)
     const consecutive = state?.consecutive_failures ?? 0
     const lastNotifiedAt = state?.last_notification_at ?? null
+    const threshold = state?.failure_threshold ?? 3
+    const cooldown = state?.cooldown_ms ?? 300_000
 
     if (candidate.new_status !== 'success') {
-      // fail transition: check threshold and cooldown
-      if (consecutive < FAILURE_THRESHOLD) continue
+      // fail transition: check per-test threshold and cooldown
+      if (consecutive < threshold) continue
       if (lastNotifiedAt !== null) {
         const elapsed = Date.now() - lastNotifiedAt.getTime()
-        if (elapsed < COOLDOWN_MS) continue
+        if (elapsed < cooldown) continue
       }
-      await dispatchForTest(candidate.test_id, 'fail', consecutive)
+      await dispatchForTest(candidate.test_id, 'fail', consecutive, candidate.error_message, candidate.duration_ms, null)
     } else {
       // recovery transition: only notify if we previously sent a fail alert
       if (lastNotifiedAt === null) continue
-      await dispatchForTest(candidate.test_id, 'recovery', consecutive)
+      await dispatchForTest(candidate.test_id, 'recovery', consecutive, null, candidate.duration_ms, lastNotifiedAt)
     }
   }
 }
@@ -61,6 +68,9 @@ async function dispatchForTest(
   testId: string,
   event: 'fail' | 'recovery',
   consecutiveFailures: number,
+  errorMessage: string | null,
+  durationMs: number,
+  lastNotifiedAt: Date | null,
 ): Promise<void> {
   // Update last_notification_at first to prevent duplicate dispatches
   const newNotifiedAt = event === 'fail' ? new Date() : null
@@ -81,9 +91,20 @@ async function dispatchForTest(
     [testId],
   )
 
+  const downtimeMs = lastNotifiedAt !== null ? Date.now() - lastNotifiedAt.getTime() : null
+
   for (const channel of channelResult.rows) {
     try {
-      const body = buildPayload(channel.type, channel.test_name, event, consecutiveFailures, testId)
+      const body = buildPayload(
+        channel.type,
+        channel.test_name,
+        event,
+        consecutiveFailures,
+        testId,
+        errorMessage,
+        durationMs,
+        downtimeMs,
+      )
       await request(channel.webhook_url, {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
@@ -101,21 +122,80 @@ function buildPayload(
   event: 'fail' | 'recovery',
   consecutiveFailures: number,
   testId: string,
+  errorMessage: string | null,
+  durationMs: number,
+  downtimeMs: number | null,
 ): Record<string, unknown> {
+  const now = new Date().toISOString()
+
   if (type === 'discord') {
-    const content =
-      event === 'fail'
-        ? `🚨 **${testName}** has failed ${consecutiveFailures} times in a row`
-        : `✅ **${testName}** has recovered`
-    return { content }
+    if (event === 'fail') {
+      const fields: Record<string, unknown>[] = []
+      if (errorMessage) {
+        fields.push({ name: 'Reason', value: errorMessage, inline: false })
+      }
+      fields.push({ name: 'Consecutive Failures', value: String(consecutiveFailures), inline: true })
+      fields.push({ name: 'Response Time', value: `${durationMs} ms`, inline: true })
+      return {
+        embeds: [{
+          title: `🚨 ${testName} is DOWN`,
+          color: 15158332, // red
+          fields,
+          timestamp: now,
+          footer: { text: 'Sentinel' },
+        }],
+      }
+    } else {
+      const fields: Record<string, unknown>[] = []
+      if (downtimeMs !== null) {
+        fields.push({ name: 'Downtime', value: formatDuration(downtimeMs), inline: true })
+      }
+      fields.push({ name: 'Response Time', value: `${durationMs} ms`, inline: true })
+      return {
+        embeds: [{
+          title: `✅ ${testName} is back UP`,
+          color: 3066993, // green
+          fields,
+          timestamp: now,
+          footer: { text: 'Sentinel' },
+        }],
+      }
+    }
   }
 
   if (type === 'slack') {
-    const text =
-      event === 'fail'
-        ? `🚨 *${testName}* has failed ${consecutiveFailures} times in a row`
-        : `✅ *${testName}* has recovered`
-    return { text }
+    if (event === 'fail') {
+      const fields: Record<string, unknown>[] = []
+      if (errorMessage) {
+        fields.push({ title: 'Reason', value: errorMessage, short: false })
+      }
+      fields.push({ title: 'Consecutive Failures', value: String(consecutiveFailures), short: true })
+      fields.push({ title: 'Response Time', value: `${durationMs} ms`, short: true })
+      return {
+        attachments: [{
+          color: '#e74c3c',
+          title: `🚨 ${testName} is DOWN`,
+          fields,
+          footer: 'Sentinel',
+          ts: Math.floor(Date.now() / 1000),
+        }],
+      }
+    } else {
+      const fields: Record<string, unknown>[] = []
+      if (downtimeMs !== null) {
+        fields.push({ title: 'Downtime', value: formatDuration(downtimeMs), short: true })
+      }
+      fields.push({ title: 'Response Time', value: `${durationMs} ms`, short: true })
+      return {
+        attachments: [{
+          color: '#2ecc71',
+          title: `✅ ${testName} is back UP`,
+          fields,
+          footer: 'Sentinel',
+          ts: Math.floor(Date.now() / 1000),
+        }],
+      }
+    }
   }
 
   // generic webhook
@@ -124,6 +204,24 @@ function buildPayload(
     test_name: testName,
     event,
     consecutive_failures: consecutiveFailures,
-    timestamp: new Date().toISOString(),
+    error_message: errorMessage,
+    duration_ms: durationMs,
+    downtime_ms: downtimeMs,
+    timestamp: now,
   }
+}
+
+function formatDuration(ms: number): string {
+  const totalSeconds = Math.floor(ms / 1000)
+  const hours = Math.floor(totalSeconds / 3600)
+  const minutes = Math.floor((totalSeconds % 3600) / 60)
+  const seconds = totalSeconds % 60
+
+  if (hours > 0) {
+    return minutes > 0 ? `${hours}h ${minutes}m` : `${hours}h`
+  }
+  if (minutes > 0) {
+    return seconds > 0 ? `${minutes}m ${seconds}s` : `${minutes}m`
+  }
+  return `${seconds}s`
 }
