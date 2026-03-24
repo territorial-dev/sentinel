@@ -12,6 +12,7 @@ function msUntilMidnightUTC(): number {
 }
 
 export function startAggregator(): void {
+  void runAggregation()
   timeoutHandle = setTimeout(() => {
     void runAggregation()
     intervalHandle = setInterval(() => {
@@ -36,10 +37,11 @@ export async function runAggregation(): Promise<void> {
   const now = new Date()
   const today = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()))
   const yesterday = new Date(today.getTime() - MS_PER_DAY)
-  const todayStr = today.toISOString().slice(0, 10)
+  const tomorrow = new Date(today.getTime() + MS_PER_DAY)
   const yesterdayStr = yesterday.toISOString().slice(0, 10)
+  const tomorrowStr = tomorrow.toISOString().slice(0, 10)
 
-  // 1. Aggregate yesterday's test_runs into uptime_daily
+  // 1. Aggregate yesterday's and today's test_runs into uptime_daily
   try {
     await pool.query(
       `INSERT INTO uptime_daily (test_id, date, success_count, failure_count, avg_latency_ms)
@@ -57,9 +59,9 @@ export async function runAggregation(): Promise<void> {
          success_count  = EXCLUDED.success_count,
          failure_count  = EXCLUDED.failure_count,
          avg_latency_ms = EXCLUDED.avg_latency_ms`,
-      [yesterdayStr, todayStr],
+      [yesterdayStr, tomorrowStr],
     )
-    console.info(`aggregator: upserted uptime_daily for ${yesterdayStr}`)
+    console.info(`aggregator: upserted uptime_daily for ${yesterdayStr} and today`)
   } catch (err) {
     console.error('aggregator: failed to upsert uptime_daily', err)
   }

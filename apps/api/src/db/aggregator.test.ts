@@ -22,7 +22,7 @@ afterEach(() => {
 })
 
 describe('runAggregation', () => {
-  it('issues the uptime_daily upsert with yesterday and today dates', async () => {
+  it('issues the uptime_daily upsert with yesterday and tomorrow dates (covers yesterday + today)', async () => {
     await runAggregation()
 
     const firstCall = mockQuery.mock.calls[0]
@@ -35,8 +35,11 @@ describe('runAggregation', () => {
     // both should be ISO date strings (YYYY-MM-DD)
     expect(params[0]!).toMatch(/^\d{4}-\d{2}-\d{2}$/)
     expect(params[1]!).toMatch(/^\d{4}-\d{2}-\d{2}$/)
-    // yesterday < today
+    // yesterday < tomorrow (range covers yesterday and today)
     expect(params[0]! < params[1]!).toBe(true)
+    // gap should be 2 days
+    const diff = new Date(params[1]!).getTime() - new Date(params[0]!).getTime()
+    expect(diff).toBe(2 * 24 * 60 * 60 * 1000)
   })
 
   it('queries pg_class for partition names', async () => {
@@ -145,31 +148,41 @@ describe('startAggregator / stopAggregator', () => {
     expect(() => stopAggregator()).not.toThrow()
   })
 
-  it('startAggregator schedules a setTimeout that fires at midnight UTC', () => {
+  it('startAggregator runs aggregation immediately and again at midnight UTC', async () => {
     vi.useFakeTimers()
     startAggregator()
+
+    // Immediate run fires as fire-and-forget; flush pending promises
+    await vi.advanceTimersByTimeAsync(0)
+    const callsAfterStart = mockQuery.mock.calls.length
+    expect(callsAfterStart).toBeGreaterThan(0)
+
+    mockQuery.mockClear()
 
     // Advance to just past the next midnight UTC
     const now = new Date()
     const midnight = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1))
     const msToMidnight = midnight.getTime() - now.getTime()
 
-    vi.advanceTimersByTime(msToMidnight + 1)
+    await vi.advanceTimersByTimeAsync(msToMidnight + 1)
 
-    // runAggregation fires: expect at least the upsert query to have been called
+    // midnight run fires: expect at least the upsert query to have been called
     expect(mockQuery).toHaveBeenCalled()
 
     stopAggregator()
     vi.useRealTimers()
   })
 
-  it('stopAggregator prevents the scheduled job from running', () => {
+  it('stopAggregator prevents the midnight job from running (startup run already fired)', async () => {
     vi.useFakeTimers()
     startAggregator()
+    await vi.advanceTimersByTimeAsync(0)
+    mockQuery.mockClear()
+
     stopAggregator()
 
-    // Advance well past midnight
-    vi.advanceTimersByTime(25 * 60 * 60 * 1000)
+    // Advance well past midnight — no more queries after stop
+    await vi.advanceTimersByTimeAsync(25 * 60 * 60 * 1000)
 
     expect(mockQuery).not.toHaveBeenCalled()
     vi.useRealTimers()
