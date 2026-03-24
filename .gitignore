@@ -2,3 +2,8 @@ node_modules
 conversation.json
 .env
 .env.local
+
+# Next.js
+.next/
+next-env.d.ts
+*.tsbuildinfo
