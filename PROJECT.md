@@ -8,9 +8,13 @@ To start a feature: move it (or describe it) into **Current Focus**. When done, 
 
 ## Current Focus
 
-### F-13 · Named Assertions
+### F-14 · "Run Now" Button
 
-`ctx.assert(name, value, message?)` — records individual assertion results as `assertion_results` rows linked to the `test_run`. Test still passes/fails as a whole, but individual assertions are stored and displayed.
+API endpoint `POST /tests/:id/run` triggers immediate execution outside the scheduler. Returns the `TestRun` result synchronously (with a reasonable timeout). Web UI button on the test detail page.
+
+### F-15 · Real-Time Log Streaming
+
+When a "run now" is triggered, stream `ctx.log()` output back to the browser via SSE (`GET /tests/:id/run/stream`). Display in a live console on the test detail page.
 
 ---
 
@@ -122,7 +126,7 @@ Page at `/status` (no auth). Server-rendered from `uptime_daily` only — no raw
 
 ## Milestone 2 — Enhanced Execution
 
-### F-13 · Named Assertions
+### ✅ F-13 · Named Assertions
 
 `ctx.assert(name, value, message?)` — records individual assertion results as `assertion_results` rows linked to the `test_run`. Test still passes/fails as a whole, but individual assertions are stored and displayed.
 
@@ -175,3 +179,7 @@ Create a Dockerfile to pack the API into a standalone deployment, useful when wo
 ### M-04 · Documentation
 
 Create a small user documentation explaining deployment, creation of tests, and whatever else you feel interesting. Put it on the main README.md
+
+### M-05 · Automated tests
+
+Create an automated test workflow, which should be a pre-requisite to every build workflow. Create a coverage report, add badges to the README
