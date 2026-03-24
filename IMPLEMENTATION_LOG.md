@@ -147,6 +147,32 @@ AI agents must append an entry here after completing any feature from PROJECT.md
 
 ---
 
+## 2026-03-24 · F-09 · Web — Dashboard (Test List)
+
+**What was built:** First frontend feature — a server-rendered Next.js 15 dashboard at `/` showing all tests with live status, last run time, and 7-day pass rate. Added a new `GET /dashboard` API endpoint that joins `tests`, `test_state`, and `uptime_daily` in a single SQL query to return enriched `TestSummary` rows. The Next.js app was scaffolded from scratch (Tailwind CSS, PostCSS, `next.config.ts`, root layout, globals.css).
+
+**Files changed:**
+- `packages/shared/src/types.ts` — added `TestSummary` interface
+- `apps/api/src/routes/dashboard.ts` (new) — `GET /dashboard` with join query
+- `apps/api/src/server.ts` — registered `dashboardRoutes` at prefix `/dashboard`
+- `apps/web/package.json` — added tailwindcss, postcss, autoprefixer devDeps
+- `apps/web/tailwind.config.ts` (new)
+- `apps/web/postcss.config.js` (new)
+- `apps/web/next.config.ts` (new)
+- `apps/web/app/globals.css` (new)
+- `apps/web/app/layout.tsx` (new)
+- `apps/web/app/page.tsx` (new) — server component dashboard
+
+**Decisions:**
+- A dedicated `/dashboard` endpoint (not the existing `GET /tests`) avoids N+1 queries for status and pass rate — one SQL query returns everything needed.
+- Pass rate computed in SQL with `ROUND(100.0 * SUM(success) / NULLIF(total, 0))` to handle tests with no history (returns NULL → renders as "—").
+- `last_run_at` relative time formatting done server-side with plain `Date` arithmetic — no client-side library, no JS required in the browser.
+- `export const dynamic = 'force-dynamic'` disables Next.js caching so the page always reflects current test state.
+
+**Deferred:** Navigation header, links to test detail page (F-11), and pagination (tests list is unbounded for now).
+
+---
+
 ## 2026-03-23 · F-05 · Result Persistence
 
 **What was built:** An in-memory result buffer (`result-buffer.ts`) that accumulates `RunResult` rows after each test execution and flushes them to Postgres in batches — up to 100 rows per flush, triggered every 2 seconds or when the buffer hits 100. A single multi-row `INSERT` writes all `test_runs` at once; a deduplicated multi-row upsert (latest result per `test_id`) updates `test_state`. The direct single-row INSERT was removed from the executor, and graceful shutdown drains the buffer before exit.

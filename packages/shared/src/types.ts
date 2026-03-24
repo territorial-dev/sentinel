@@ -57,3 +57,12 @@ export interface TestState {
   last_notification_at: Date | null
   last_run_at: Date | null
 }
+
+export interface TestSummary {
+  id: string
+  name: string
+  enabled: boolean
+  last_status: TestStatus | null
+  last_run_at: string | null
+  pass_rate_7d: number | null
+}
