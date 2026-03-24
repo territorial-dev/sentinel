@@ -1,3 +1,4 @@
+import Link from 'next/link'
 import type { TestSummary } from '@sentinel/shared'
 
 export const dynamic = 'force-dynamic'
@@ -55,7 +56,10 @@ export default async function DashboardPage() {
 
   return (
     <main className="min-h-screen bg-zinc-950 px-8 py-12">
-      <h1 className="text-zinc-100 text-lg mb-8">sentinel</h1>
+      <div className="flex items-center justify-between mb-8">
+        <h1 className="text-zinc-100 text-lg">sentinel</h1>
+        <Link href="/tests/new" className="text-zinc-500 text-sm hover:text-zinc-300 transition-colors">+ new test</Link>
+      </div>
 
       {tests.length === 0 ? (
         <p className="text-zinc-500 text-center mt-24">No tests yet.</p>
@@ -75,8 +79,10 @@ export default async function DashboardPage() {
                 key={test.id}
                 className="hover:bg-zinc-900/50 transition-opacity duration-150"
               >
-                <td className="py-3 pr-8 text-zinc-100">
-                  {test.name}
+                <td className="py-3 pr-8">
+                  <Link href={`/tests/${test.id}`} className="text-zinc-100 hover:text-white transition-colors">
+                    {test.name}
+                  </Link>
                   {!test.enabled && (
                     <span className="ml-2 text-zinc-600 text-xs">disabled</span>
                   )}

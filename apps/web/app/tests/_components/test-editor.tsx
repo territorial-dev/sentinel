@@ -1,0 +1,244 @@
+'use client'
+
+import dynamic from 'next/dynamic'
+import { useRouter } from 'next/navigation'
+import { useState } from 'react'
+import type { Test } from '@sentinel/shared'
+
+const MonacoEditor = dynamic(() => import('@monaco-editor/react'), { ssr: false })
+
+const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001'
+
+const DEFAULT_CODE = `const res = await ctx.http.get('https://example.com')
+ctx.assert('status ok', res.status === 200)
+`
+
+interface Props {
+  test?: Test
+}
+
+interface FormErrors {
+  name?: string
+  schedule?: string
+  timeout?: string
+  submit?: string
+}
+
+interface RunResult {
+  status: 'success' | 'fail' | 'timeout'
+  duration_ms: number
+  error_message: string | null
+}
+
+export default function TestEditor({ test }: Props) {
+  const router = useRouter()
+  const isNew = !test
+
+  const [name, setName] = useState(test?.name ?? '')
+  const [scheduleS, setScheduleS] = useState(String((test?.schedule_ms ?? 60_000) / 1000))
+  const [timeoutS, setTimeoutS] = useState(String((test?.timeout_ms ?? 5_000) / 1000))
+  const [enabled, setEnabled] = useState(test?.enabled ?? true)
+  const [code, setCode] = useState(test?.code ?? DEFAULT_CODE)
+  const [errors, setErrors] = useState<FormErrors>({})
+  const [saving, setSaving] = useState(false)
+  const [running, setRunning] = useState(false)
+  const [runResult, setRunResult] = useState<RunResult | null>(null)
+
+  const codeDirty = !!test && code !== test.code
+
+  function validate(): FormErrors {
+    const errs: FormErrors = {}
+    if (!name.trim()) errs.name = 'Name is required.'
+    const sched = Number(scheduleS)
+    if (!Number.isFinite(sched) || sched < 30) errs.schedule = 'Minimum 30 seconds.'
+    const tout = Number(timeoutS)
+    if (!Number.isFinite(tout) || tout < 1 || tout > 10) errs.timeout = 'Must be between 1 and 10 seconds.'
+    return errs
+  }
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    const errs = validate()
+    if (Object.keys(errs).length > 0) {
+      setErrors(errs)
+      return
+    }
+    setErrors({})
+    setSaving(true)
+
+    const body = {
+      name: name.trim(),
+      code,
+      schedule_ms: Number(scheduleS) * 1000,
+      timeout_ms: Number(timeoutS) * 1000,
+      enabled,
+    }
+
+    try {
+      const url = isNew ? `${API_URL}/tests` : `${API_URL}/tests/${test.id}`
+      const method = isNew ? 'POST' : 'PATCH'
+      const res = await fetch(url, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      })
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}))
+        setErrors({ submit: (data as { message?: string }).message ?? 'Save failed.' })
+        return
+      }
+      router.push('/')
+    } catch {
+      setErrors({ submit: 'Network error. Is the API running?' })
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  async function handleRun() {
+    if (!test) return
+    setRunning(true)
+    setRunResult(null)
+    try {
+      const res = await fetch(`${API_URL}/tests/${test.id}/run`, { method: 'POST' })
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}))
+        setRunResult({ status: 'fail', duration_ms: 0, error_message: (data as { error?: string }).error ?? 'Run failed.' })
+        return
+      }
+      const result = await res.json() as RunResult
+      setRunResult(result)
+    } catch {
+      setRunResult({ status: 'fail', duration_ms: 0, error_message: 'Network error. Is the API running?' })
+    } finally {
+      setRunning(false)
+    }
+  }
+
+  return (
+    <form onSubmit={handleSubmit} className="grid h-screen bg-zinc-950" style={{ gridTemplateColumns: '300px 1fr' }}>
+      {/* Left: form fields */}
+      <aside className="flex flex-col gap-6 px-6 py-8 border-r border-zinc-800 overflow-y-auto">
+        <a href="/" className="text-zinc-500 text-xs hover:text-zinc-300 transition-colors">← back</a>
+
+        <h1 className="text-zinc-100 text-sm">{isNew ? 'new test' : 'edit test'}</h1>
+
+        {/* Name */}
+        <div>
+          <label className="block text-zinc-500 text-xs mb-1.5 tracking-wider uppercase">Name</label>
+          <input
+            type="text"
+            value={name}
+            onChange={e => setName(e.target.value)}
+            className="w-full bg-zinc-900 border border-zinc-800 text-zinc-100 text-sm px-3 py-2 outline-none focus:border-zinc-600"
+            placeholder="my-api-check"
+          />
+          {errors.name && <p className="text-red-400 text-xs mt-1">{errors.name}</p>}
+        </div>
+
+        {/* Schedule */}
+        <div>
+          <label className="block text-zinc-500 text-xs mb-1.5 tracking-wider uppercase">Interval (s)</label>
+          <input
+            type="number"
+            value={scheduleS}
+            onChange={e => setScheduleS(e.target.value)}
+            min={30}
+            className="w-full bg-zinc-900 border border-zinc-800 text-zinc-100 text-sm px-3 py-2 outline-none focus:border-zinc-600"
+          />
+          {errors.schedule && <p className="text-red-400 text-xs mt-1">{errors.schedule}</p>}
+        </div>
+
+        {/* Timeout */}
+        <div>
+          <label className="block text-zinc-500 text-xs mb-1.5 tracking-wider uppercase">Timeout (s)</label>
+          <input
+            type="number"
+            value={timeoutS}
+            onChange={e => setTimeoutS(e.target.value)}
+            min={1}
+            max={10}
+            className="w-full bg-zinc-900 border border-zinc-800 text-zinc-100 text-sm px-3 py-2 outline-none focus:border-zinc-600"
+          />
+          {errors.timeout && <p className="text-red-400 text-xs mt-1">{errors.timeout}</p>}
+        </div>
+
+        {/* Enabled */}
+        <div className="flex items-center gap-3">
+          <input
+            id="enabled"
+            type="checkbox"
+            checked={enabled}
+            onChange={e => setEnabled(e.target.checked)}
+            className="w-4 h-4 accent-zinc-100"
+          />
+          <label htmlFor="enabled" className="text-zinc-400 text-sm">Enabled</label>
+        </div>
+
+        <div className="mt-auto flex flex-col gap-2">
+          {errors.submit && <p className="text-red-400 text-xs">{errors.submit}</p>}
+          <button
+            type="submit"
+            disabled={saving}
+            className="w-full bg-zinc-100 text-zinc-950 py-2 text-sm disabled:opacity-50 hover:bg-white transition-colors"
+          >
+            {saving ? 'Saving…' : 'Save'}
+          </button>
+
+          {!isNew && (
+            <button
+              type="button"
+              onClick={handleRun}
+              disabled={running || codeDirty}
+              className="w-full border border-zinc-700 text-zinc-400 py-2 text-sm disabled:opacity-50 disabled:cursor-not-allowed hover:border-zinc-500 hover:text-zinc-200 transition-colors"
+            >
+              {running ? 'Running…' : 'Run now'}
+            </button>
+          )}
+
+          {!isNew && codeDirty && (
+            <p className="text-zinc-500 text-xs">
+              Save before running — the server uses your last saved code.
+            </p>
+          )}
+
+          {runResult && (
+            <div className={`border px-3 py-2.5 text-xs flex flex-col gap-1 ${
+              runResult.status === 'success'
+                ? 'border-emerald-800 text-emerald-400'
+                : 'border-red-900 text-red-400'
+            }`}>
+              <div className="flex items-center justify-between">
+                <span>{runResult.status}</span>
+                <span className="text-zinc-500">{runResult.duration_ms}ms</span>
+              </div>
+              {runResult.error_message && (
+                <p className="text-zinc-400 break-words">{runResult.error_message}</p>
+              )}
+            </div>
+          )}
+        </div>
+      </aside>
+
+      {/* Right: Monaco */}
+      <div className="h-full">
+        <MonacoEditor
+          height="100%"
+          language="javascript"
+          theme="vs-dark"
+          value={code}
+          onChange={val => setCode(val ?? '')}
+          options={{
+            fontFamily: 'Consolas, monospace',
+            fontSize: 13,
+            lineHeight: 20,
+            minimap: { enabled: false },
+            scrollBeyondLastLine: false,
+            padding: { top: 24, bottom: 24 },
+            renderLineHighlight: 'none',
+          }}
+        />
+      </div>
+    </form>
+  )
+}
