@@ -1,7 +1,7 @@
 import type { FastifyInstance } from 'fastify'
 import { nanoid } from 'nanoid'
 import { CreateTestSchema, UpdateTestSchema } from '@sentinel/shared'
-import type { Test, TestRun } from '@sentinel/shared'
+import type { AssertionResult, Test, TestRun } from '@sentinel/shared'
 import { pool } from '../db/pool.js'
 import { invalidateCache } from '../executor/compile.js'
 import { testEvents } from '../events.js'
@@ -45,7 +45,18 @@ export async function testsRoutes(app: FastifyInstance): Promise<void> {
        FROM test_runs WHERE test_id = $1 ORDER BY finished_at DESC LIMIT 20`,
       [req.params.id]
     )
-    return reply.send(rows)
+    const runIds = rows.map(r => r.id)
+    const { rows: assertionRows } = await pool.query<AssertionResult>(
+      `SELECT id, test_run_id, name, passed, message FROM assertion_results WHERE test_run_id = ANY($1)`,
+      [runIds]
+    )
+    const byRunId = new Map<string, AssertionResult[]>()
+    for (const a of assertionRows) {
+      const list = byRunId.get(a.test_run_id) ?? []
+      list.push(a)
+      byRunId.set(a.test_run_id, list)
+    }
+    return reply.send(rows.map(r => ({ ...r, assertions: byRunId.get(r.id) ?? [] })))
   })
 
   // GET /tests/:id
