@@ -1,6 +1,7 @@
 'use client'
 
 import dynamic from 'next/dynamic'
+import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 import type { Test } from '@sentinel/shared'
@@ -87,7 +88,11 @@ export default function TestEditor({ test }: Props) {
         setErrors({ submit: (data as { message?: string }).message ?? 'Save failed.' })
         return
       }
-      router.push('/')
+      if (isNew) {
+        router.push('/')
+      } else if (test) {
+        router.push(`/tests/${test.id}`)
+      }
     } catch {
       setErrors({ submit: 'Network error. Is the API running?' })
     } finally {
@@ -119,7 +124,15 @@ export default function TestEditor({ test }: Props) {
     <form onSubmit={handleSubmit} className="grid h-screen bg-zinc-950" style={{ gridTemplateColumns: '300px 1fr' }}>
       {/* Left: form fields */}
       <aside className="flex flex-col gap-6 px-6 py-8 border-r border-zinc-800 overflow-y-auto">
-        <a href="/" className="text-zinc-500 text-xs hover:text-zinc-300 transition-colors">← back</a>
+        {isNew ? (
+          <Link href="/" className="text-zinc-500 text-xs hover:text-zinc-300 transition-colors">
+            ← back
+          </Link>
+        ) : (
+          <Link href={`/tests/${test.id}`} className="text-zinc-500 text-xs hover:text-zinc-300 transition-colors">
+            ← back
+          </Link>
+        )}
 
         <h1 className="text-zinc-100 text-sm">{isNew ? 'new test' : 'edit test'}</h1>
 
