@@ -8,6 +8,14 @@ To start a feature: move it (or describe it) into **Current Focus**. When done, 
 
 ## Current Focus
 
+### F-09 · Web — Dashboard (Test List)
+
+Next.js page at `/` (server component). Fetches all tests from the API. Displays a table: test name, status badge (pass/fail/unknown), last run time, 7-day pass rate from `uptime_daily`. No client-side data fetching.
+
+**UI:** Dark background (`zinc-950`). Sparse table — no borders between rows, only subtle row hover. Status badge: colored dot + label (emerald for pass, red for fail, zinc for unknown). 7-day pass rate as a plain percentage — no chart needed here.
+
+**Done when:** the dashboard loads and shows the correct status for each test; page renders without client JS.
+
 ---
 
 ## Milestone 1 — Core Engine (MVP)
