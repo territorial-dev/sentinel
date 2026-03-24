@@ -3,6 +3,17 @@
 A running record of what was built and why. Append-only — do not edit past entries.
 AI agents must append an entry here after completing any feature from PROJECT.md.
 
+## 2026-03-24 · F-06 · Daily Aggregation
+
+**What was built:** A daily cron (`aggregator.ts`) that fires at midnight UTC, upserts `uptime_daily` stats from the prior day's `test_runs`, drops `test_runs` monthly partitions older than 7 days, and prunes `uptime_daily` rows older than 90 days. Wired into the process lifecycle alongside the scheduler and result flusher.
+**Files changed:**
+- `apps/api/src/db/aggregator.ts` (new)
+- `apps/api/src/db/aggregator.test.ts` (new — 12 unit tests)
+- `apps/api/src/index.ts` (wired startAggregator/stopAggregator)
+
+**Decisions:** Each of the three SQL steps is wrapped in an independent try/catch so a pg_class failure (e.g. permissions) cannot block the uptime_daily prune. Partition names are fetched from pg_class with a parameterized regex to avoid client-side assumptions; the YYYY_MM month value (1-indexed) is used directly as the 0-indexed Date month argument, which naturally yields the start of the *next* month as the partition end bound. No transaction is needed — all three operations are idempotent.
+**Deferred:** No integration test (would require a real seeded DB with time-partitioned data); partition creation for future months is handled by the initial migration, not the aggregator.
+
 ---
 
 <!-- entries go here, newest at the bottom -->
@@ -77,3 +88,23 @@ AI agents must append an entry here after completing any feature from PROJECT.md
 - Jitter is applied once per `register()` call (not recalculated each tick) to keep timer management simple while still staggering tests registered at the same moment.
 
 **Deferred:** `TestState` update after each scheduled run; retry logic; `uses_browser` (Playwright) path.
+
+## 2026-03-23 · F-05 · Result Persistence
+
+**What was built:** An in-memory result buffer (`result-buffer.ts`) that accumulates `RunResult` rows after each test execution and flushes them to Postgres in batches — up to 100 rows per flush, triggered every 2 seconds or when the buffer hits 100. A single multi-row `INSERT` writes all `test_runs` at once; a deduplicated multi-row upsert (latest result per `test_id`) updates `test_state`. The direct single-row INSERT was removed from the executor, and graceful shutdown drains the buffer before exit.
+
+**Files changed:**
+- `apps/api/src/db/result-buffer.ts` — new module: `enqueue`, `startFlusher`, `stopFlusher`, `flush`
+- `apps/api/src/executor/run.ts` — removed direct `test_runs` INSERT; cleaned unused `TestRun` import
+- `apps/api/src/scheduler/index.ts` — added `.then(enqueue)` to p-limit callback
+- `apps/api/src/routes/run.ts` — added `enqueue(result)` after manual run
+- `apps/api/src/index.ts` — wired flusher lifecycle; added SIGTERM/SIGINT graceful shutdown
+
+**Decisions:**
+- `flushInProgress` boolean guard prevents concurrent flush invocations from competing for connections when a 100-row threshold flush and a timer flush overlap.
+- Buffer is swapped atomically (reassign to `[]`) before any `await`, so `enqueue()` calls during a flush write into a fresh array and are not lost.
+- On flush error, rows are prepended back to the buffer for retry on the next tick.
+- `flushTestRuns` and `flushTestState` are sequential (not parallel) to cap peak connection usage at 1 during a flush cycle, well within the `max: 5` pool.
+- `last_notification_at` is excluded from the `test_state` upsert — that column is owned by F-07.
+
+**Deferred:** Retry logic; `uses_browser` path; assertion_results are still written immediately in the executor (not buffered) — buffering them would add complexity for minimal gain given they are already batched per run.
