@@ -66,3 +66,20 @@ export interface TestSummary {
   last_run_at: string | null
   pass_rate_7d: number | null
 }
+
+/** Public /status page — derived from `uptime_daily` only (no raw runs). */
+export type PublicStatusOutcome = 'up' | 'down' | 'unknown'
+
+export interface PublicStatusDay {
+  date: string
+  outcome: PublicStatusOutcome
+}
+
+export interface PublicStatusTest {
+  id: string
+  name: string
+  enabled: boolean
+  current_status: PublicStatusOutcome
+  uptime_pct_30d: number | null
+  days: PublicStatusDay[]
+}

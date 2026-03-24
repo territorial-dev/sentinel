@@ -258,3 +258,19 @@ AI agents must append an entry here after completing any feature from PROJECT.md
 **Decisions:** Chart data reverses the API’s newest-first run list for left-to-right time flow. Loading placeholder is a static skeleton (no pulse) to stay within “calm motion” guidance. Tooltip omits the failure series row when absent.
 
 **Deferred:** None.
+
+---
+
+## 2026-03-24 · F-12 · Web — Public Status Page
+
+**What was built:** `GET /status` on the API returns per-test 30-day aggregates from `uptime_daily` plus test id/name/enabled (two SQL queries, merge in TypeScript). Each payload includes 30 UTC calendar days (oldest→newest), per-day up/down/unknown from daily success/failure counts, a rounded 30-day uptime percentage, and `current_status` from the newest day in the window that has any runs (aggregated-only; no `test_state` or `test_runs`). The Next.js app serves `/status` with `revalidate = 300` and `fetch(..., { next: { revalidate: 300 } })`: cards (`max-w-2xl`), large uptime %, 30-square bar, disabled tests muted; no nav.
+
+**Files changed:**
+- `packages/shared/src/types.ts` — `PublicStatusOutcome`, `PublicStatusDay`, `PublicStatusTest`
+- `apps/api/src/routes/status.ts` (new), `apps/api/src/server.ts` — register `/status`
+- `apps/web/app/status/page.tsx` (new)
+- `PROJECT.md` — F-12 complete; Current Focus → F-13
+
+**Decisions:** Postgres `CURRENT_DATE` aligns with server UTC for the `uptime_daily` date filter; the 30-day axis is built in JS with `Date.UTC` so it matches that window even if session TZ differed. Any failure on a day marks the square red; all-success days are emerald; no data is zinc.
+
+**Deferred:** None.

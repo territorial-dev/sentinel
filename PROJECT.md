@@ -8,13 +8,9 @@ To start a feature: move it (or describe it) into **Current Focus**. When done, 
 
 ## Current Focus
 
-### F-12 · Web — Public Status Page
+### F-13 · Named Assertions
 
-Page at `/status` (no auth). Server-rendered from `uptime_daily` only — no raw `test_runs` queries. Shows each test: name, current status, 30-day uptime %, 30-day daily history bar. Fast static render (ISR, 5-minute revalidation).
-
-**UI:** Centered narrow layout (max-w-2xl). Each test is a card with: name, uptime % in large type, 30-day bar (30 colored squares — emerald/red/zinc per day). No navigation, no sidebar. This page is meant to be embedded or shared — keep it self-contained and load-fast.
-
-**Done when:** `/status` loads without auth, is fast, and shows 30-day history correctly.
+`ctx.assert(name, value, message?)` — records individual assertion results as `assertion_results` rows linked to the `test_run`. Test still passes/fails as a whole, but individual assertions are stored and displayed.
 
 ---
 
@@ -114,7 +110,7 @@ Page at `/tests/[id]`. Shows: last 20 runs with status badge + duration + error 
 
 ---
 
-### F-12 · Web — Public Status Page
+### ✅ F-12 · Web — Public Status Page
 
 Page at `/status` (no auth). Server-rendered from `uptime_daily` only — no raw `test_runs` queries. Shows each test: name, current status, 30-day uptime %, 30-day daily history bar. Fast static render (ISR, 5-minute revalidation).
 
