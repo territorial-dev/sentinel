@@ -7,13 +7,14 @@ To start a feature: move it (or describe it) into **Current Focus**. When done, 
 ---
 
 ## Current Focus
-### F-10 · Web — Test Editor
 
-Page at `/tests/new` and `/tests/[id]`. Monaco Editor (dynamically imported, `ssr: false`) for editing JS code. Form fields for name, interval, timeout. On save, calls the API. Basic error display.
+### F-12 · Web — Public Status Page
 
-**UI:** Two-column layout — left: form fields (name, interval, timeout, enabled toggle); right: Monaco editor taking full remaining height. Monaco configured with dark theme matching app background, Consolas font. Validation errors appear inline below each field, not in a toast. Save button is the only prominent action.
+Page at `/status` (no auth). Server-rendered from `uptime_daily` only — no raw `test_runs` queries. Shows each test: name, current status, 30-day uptime %, 30-day daily history bar. Fast static render (ISR, 5-minute revalidation).
 
-**Done when:** can create a new test with JS code in the editor and have it appear in the dashboard.
+**UI:** Centered narrow layout (max-w-2xl). Each test is a card with: name, uptime % in large type, 30-day bar (30 colored squares — emerald/red/zinc per day). No navigation, no sidebar. This page is meant to be embedded or shared — keep it self-contained and load-fast.
+
+**Done when:** `/status` loads without auth, is fast, and shows 30-day history correctly.
 
 ---
 
@@ -93,9 +94,9 @@ Next.js page at `/` (server component). Fetches all tests from the API. Displays
 
 ---
 
-### F-10 · Web — Test Editor
+### ✅ F-10 · Web — Test Editor
 
-Page at `/tests/new` and `/tests/[id]`. Monaco Editor (dynamically imported, `ssr: false`) for editing JS code. Form fields for name, interval, timeout. On save, calls the API. Basic error display.
+Page at `/tests/new` and `/tests/[id]/edit`. Monaco Editor (dynamically imported, `ssr: false`) for editing JS code. Form fields for name, interval, timeout. On save, calls the API. Basic error display.
 
 **UI:** Two-column layout — left: form fields (name, interval, timeout, enabled toggle); right: Monaco editor taking full remaining height. Monaco configured with dark theme matching app background, Consolas font. Validation errors appear inline below each field, not in a toast. Save button is the only prominent action.
 
@@ -103,7 +104,7 @@ Page at `/tests/new` and `/tests/[id]`. Monaco Editor (dynamically imported, `ss
 
 ---
 
-### F-11 · Web — Test Detail
+### ✅ F-11 · Web — Test Detail
 
 Page at `/tests/[id]`. Shows: last 20 runs with status badge + duration + error message. Link to edit. Delete button with confirmation.
 

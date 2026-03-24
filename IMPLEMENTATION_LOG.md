@@ -222,3 +222,22 @@ AI agents must append an entry here after completing any feature from PROJECT.md
 **Decisions:** CORS is implemented with a Fastify hook instead of `@fastify/cors` to avoid adding a dependency outside the approved list. Immediate run reuses the same `runTest` + `enqueue` path as scheduled runs. Dirty detection is code-only so users can still run after changing metadata without saving.
 
 **Deferred:** Same as F-10 (delete, confirmations, run history on edit page); optional `router.refresh` or stay-on-save to avoid full list navigation after save.
+
+---
+
+## 2026-03-24 · F-11 · Web — Test Detail
+
+**What was built:** `GET /tests/:id/runs` returns the last 20 `test_runs` for a test (404 if the test does not exist). The web app uses `/tests/[id]` for a server-rendered detail view with run history (timestamp, status, duration, expandable error text), a plain **Edit** link to `/tests/[id]/edit`, and **Delete** behind a Radix `AlertDialog` (no `window.confirm`). The Monaco editor moved to `/tests/[id]/edit`; saving redirects back to the detail page.
+
+**Files changed:**
+- `apps/api/src/routes/tests.ts` — `GET /:id/runs` before `GET /:id`
+- `apps/web/app/tests/[id]/page.tsx` — detail page
+- `apps/web/app/tests/[id]/edit/page.tsx` — editor route (new)
+- `apps/web/app/tests/_components/test-editor.tsx` — back link + post-save navigation
+- `apps/web/app/tests/_components/run-history.tsx`, `delete-test-button.tsx`, `ui/alert-dialog.tsx` (new)
+- `apps/web/package.json` — `@radix-ui/react-alert-dialog`, `clsx`
+- `PROJECT.md` — Current Focus → F-12; F-10 path note; F-11 marked done
+
+**Decisions:** Editor at `/edit` avoids conflicting with the detail URL required by F-11. Alert dialog primitives mirror shadcn’s Radix wrapper without the full CLI; destructive confirm uses a plain `<button>` so the dialog stays open until `DELETE` succeeds. Tailwind `animate-in` utilities were omitted (no `tailwindcss-animate` plugin).
+
+**Deferred:** API route test for `GET /:id/runs` (optional); integration test failures observed locally are pre-existing DB/fixture issues, not this change.
