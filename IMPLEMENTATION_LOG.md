@@ -309,3 +309,13 @@ AI agents must append an entry here after completing any feature from PROJECT.md
 - `onLog` is optional with no default so scheduler-triggered runs are unaffected (zero regression risk).
 
 **Deferred:** Logs are not persisted to the DB — they are ephemeral, streaming-only. Persisting logs would require a new table and was not part of the spec.
+
+---
+
+## 2026-03-24 · F-14 + F-15 · Run Now UI polish
+
+**What was built:** Improved the `RunNowPanel` layout so the header is never disrupted. The button and a result badge (`success · 42ms`) stay inline in the header row. Log output appears in a fixed floating console anchored to the bottom-right (VS Code terminal style) with a pulsing indicator while running, a dismiss button, and a result footer.
+
+**Files changed:**
+- `apps/web/app/tests/_components/run-now-panel.tsx` — refactored to `<>` fragment: inline button/badge + fixed floating console
+- `apps/web/app/tests/[id]/page.tsx` — changed header alignment from `items-baseline` to `items-center`

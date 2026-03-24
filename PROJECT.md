@@ -8,14 +8,6 @@ To start a feature: move it (or describe it) into **Current Focus**. When done, 
 
 ## Current Focus
 
-### F-14 · "Run Now" Button
-
-API endpoint `POST /tests/:id/run` triggers immediate execution outside the scheduler. Returns the `TestRun` result synchronously (with a reasonable timeout). Web UI button on the test detail page.
-
-### F-15 · Real-Time Log Streaming
-
-When a "run now" is triggered, stream `ctx.log()` output back to the browser via SSE (`GET /tests/:id/run/stream`). Display in a live console on the test detail page.
-
 ---
 
 ## Milestone 1 — Core Engine (MVP)
@@ -130,11 +122,11 @@ Page at `/status` (no auth). Server-rendered from `uptime_daily` only — no raw
 
 `ctx.assert(name, value, message?)` — records individual assertion results as `assertion_results` rows linked to the `test_run`. Test still passes/fails as a whole, but individual assertions are stored and displayed.
 
-### F-14 · "Run Now" Button
+### ✅ F-14 · "Run Now" Button
 
 API endpoint `POST /tests/:id/run` triggers immediate execution outside the scheduler. Returns the `TestRun` result synchronously (with a reasonable timeout). Web UI button on the test detail page.
 
-### F-15 · Real-Time Log Streaming
+### ✅ F-15 · Real-Time Log Streaming
 
 When a "run now" is triggered, stream `ctx.log()` output back to the browser via SSE (`GET /tests/:id/run/stream`). Display in a live console on the test detail page.
 
