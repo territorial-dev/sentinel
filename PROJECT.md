@@ -157,3 +157,21 @@ Add `tags: string[]` to the `Test` entity. Filter dashboard by tag. Group-level 
 ### F-20 · Incident Timeline
 
 On the test detail page, show a timeline of incidents (contiguous failure periods) with start time, end time, and duration. Derived from `test_runs` or a new `incidents` table.
+
+## Maintenance Tasks
+
+### M-01 · Semantic Release
+
+Add a workflow to create semantic releases from this app, generating changelog notes every release
+
+### M-02 · Single Deployment Through Docker
+
+Create a Dockerfile to pack everything (API + APP) into a single deployment. Create a CI to build it whenever there's a new release. Use the tag paschendale/sentinel
+
+### M-03 · Standalone API Deployment
+
+Create a Dockerfile to pack the API into a standalone deployment, useful when working with Cloudflare. Create a CI to build it whenever there's a new release. Use the tag paschendale/sentinel-api
+
+### M-04 · Documentation
+
+Create a small user documentation explaining deployment, creation of tests, and whatever else you feel interesting. Put it on the main README.md
