@@ -7,14 +7,13 @@ To start a feature: move it (or describe it) into **Current Focus**. When done, 
 ---
 
 ## Current Focus
+### F-10 · Web — Test Editor
 
-### F-09 · Web — Dashboard (Test List)
+Page at `/tests/new` and `/tests/[id]`. Monaco Editor (dynamically imported, `ssr: false`) for editing JS code. Form fields for name, interval, timeout. On save, calls the API. Basic error display.
 
-Next.js page at `/` (server component). Fetches all tests from the API. Displays a table: test name, status badge (pass/fail/unknown), last run time, 7-day pass rate from `uptime_daily`. No client-side data fetching.
+**UI:** Two-column layout — left: form fields (name, interval, timeout, enabled toggle); right: Monaco editor taking full remaining height. Monaco configured with dark theme matching app background, Consolas font. Validation errors appear inline below each field, not in a toast. Save button is the only prominent action.
 
-**UI:** Dark background (`zinc-950`). Sparse table — no borders between rows, only subtle row hover. Status badge: colored dot + label (emerald for pass, red for fail, zinc for unknown). 7-day pass rate as a plain percentage — no chart needed here.
-
-**Done when:** the dashboard loads and shows the correct status for each test; page renders without client JS.
+**Done when:** can create a new test with JS code in the editor and have it appear in the dashboard.
 
 ---
 
@@ -84,7 +83,7 @@ Register with `prom-client`: `sentinel_check_duration_ms` (histogram), `sentinel
 
 ---
 
-### F-09 · Web — Dashboard (Test List)
+### ✅ F-09 · Web — Dashboard (Test List)
 
 Next.js page at `/` (server component). Fetches all tests from the API. Displays a table: test name, status badge (pass/fail/unknown), last run time, 7-day pass rate from `uptime_daily`. No client-side data fetching.
 

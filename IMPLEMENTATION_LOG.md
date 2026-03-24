@@ -192,3 +192,33 @@ AI agents must append an entry here after completing any feature from PROJECT.md
 - `last_notification_at` is excluded from the `test_state` upsert — that column is owned by F-07.
 
 **Deferred:** Retry logic; `uses_browser` path; assertion_results are still written immediately in the executor (not buffered) — buffering them would add complexity for minimal gain given they are already batched per run.
+
+## 2026-03-24 · F-10 · Web — Test Editor
+
+**What was built:** `/tests/new` and `/tests/[id]` pages with a two-column layout — form fields on the left, Monaco Editor on the right. Users can create and edit tests with name, interval, timeout, and enabled fields plus JS code. Saving calls the Fastify API and redirects to the dashboard.
+
+**Files changed:**
+- `apps/web/app/tests/_components/test-editor.tsx` — client component with Monaco (dynamic import, ssr: false), inline validation, and POST/PATCH API calls
+- `apps/web/app/tests/new/page.tsx` — server component wrapper for new test
+- `apps/web/app/tests/[id]/page.tsx` — server component that fetches existing test and pre-fills the editor
+- `apps/web/app/page.tsx` — added "+ new test" link and clickable test name links to editor
+
+**Decisions:** Monaco is dynamically imported with `ssr: false` as required. API URL uses `NEXT_PUBLIC_API_URL ?? 'http://localhost:3001'` in the client component; server-rendered pages keep using `API_URL`. Interval and timeout are stored in ms but displayed/entered in seconds for readability. Validation errors appear inline below each field.
+
+**Deferred:** Delete button, confirmation dialog, test run history on the edit page.
+
+---
+
+## 2026-03-24 · F-10 · Web — Test editor follow-up (CORS, first run, run UX)
+
+**What was built:** The API now sends CORS headers and short-circuits `OPTIONS` with 204 so the Next.js app on another origin can call REST endpoints from the browser without a proxy. The scheduler runs an enabled test once immediately when it is created (in addition to the interval), so the dashboard shows a real status instead of lingering on unknown. The test editor calls `POST /tests/:id/run` with a **Run now** button and shows status, duration, and error inline; **Run now** is disabled while Monaco code differs from the last saved `test.code`, with helper text explaining that the server runs persisted code only.
+
+**Files changed:**
+- `apps/api/src/server.ts` — `onRequest` hook: `Access-Control-*` headers, `OPTIONS` → 204
+- `apps/api/src/scheduler/index.ts` — `test:created` handler enqueues `runTest` → `enqueue` when `test.enabled`
+- `apps/web/app/tests/_components/test-editor.tsx` — Run control, `codeDirty` vs `test.code`, helper copy
+- (Initial F-10 paths also under `apps/web/app/tests/` and `apps/web/app/page.tsx` — see prior log entry.)
+
+**Decisions:** CORS is implemented with a Fastify hook instead of `@fastify/cors` to avoid adding a dependency outside the approved list. Immediate run reuses the same `runTest` + `enqueue` path as scheduled runs. Dirty detection is code-only so users can still run after changing metadata without saving.
+
+**Deferred:** Same as F-10 (delete, confirmations, run history on edit page); optional `router.refresh` or stay-on-save to avoid full list navigation after save.
