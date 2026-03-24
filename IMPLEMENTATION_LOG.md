@@ -241,3 +241,20 @@ AI agents must append an entry here after completing any feature from PROJECT.md
 **Decisions:** Editor at `/edit` avoids conflicting with the detail URL required by F-11. Alert dialog primitives mirror shadcn’s Radix wrapper without the full CLI; destructive confirm uses a plain `<button>` so the dialog stays open until `DELETE` succeeds. Tailwind `animate-in` utilities were omitted (no `tailwindcss-animate` plugin).
 
 **Deferred:** API route test for `GET /:id/runs` (optional); integration test failures observed locally are pre-existing DB/fixture issues, not this change.
+
+---
+
+## 2026-03-24 · Web — Test detail layout, code preview, latency chart
+
+**What was built:** The test detail page is full-width (`w-full`, no `max-w-3xl`). A read-only **Code** panel shows `test.code` in a monospace `<pre>` (no Monaco). A **Latency** chart uses Recharts `ComposedChart`: line for `duration_ms` (oldest→newest) and red `Bar` ticks for failed/timeout runs. **Recent runs** is a full-width semantic `<table>` with horizontal scroll on narrow viewports. Recharts is loaded via a client `run-latency-chart-loader` using `next/dynamic` + `ssr: false` (Next 15 forbids that pattern in Server Components).
+
+**Files changed:**
+- `apps/web/app/tests/[id]/page.tsx` — layout grid, code block, chart loader
+- `apps/web/app/tests/_components/run-latency-chart.tsx`, `run-latency-chart-loader.tsx` (new)
+- `apps/web/app/tests/_components/run-history.tsx` — table layout
+- `apps/web/package.json`, `pnpm-lock.yaml` — `recharts`
+- `docs/ARCHITECTURE.md` — approved `recharts`; bundle note (dynamic import)
+
+**Decisions:** Chart data reverses the API’s newest-first run list for left-to-right time flow. Loading placeholder is a static skeleton (no pulse) to stay within “calm motion” guidance. Tooltip omits the failure series row when absent.
+
+**Deferred:** None.
