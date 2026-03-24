@@ -1,7 +1,7 @@
 import type { FastifyInstance } from 'fastify'
 import { nanoid } from 'nanoid'
 import { CreateTestSchema, UpdateTestSchema } from '@sentinel/shared'
-import type { Test } from '@sentinel/shared'
+import type { Test, TestRun } from '@sentinel/shared'
 import { pool } from '../db/pool.js'
 import { invalidateCache } from '../executor/compile.js'
 import { testEvents } from '../events.js'
@@ -29,6 +29,21 @@ export async function testsRoutes(app: FastifyInstance): Promise<void> {
   app.get('/', async (_req, reply) => {
     const { rows } = await pool.query<Test>(
       'SELECT * FROM tests ORDER BY created_at DESC'
+    )
+    return reply.send(rows)
+  })
+
+  // GET /tests/:id/runs
+  app.get<{ Params: { id: string } }>('/:id/runs', async (req, reply) => {
+    const { rows: exists } = await pool.query<{ id: string }>(
+      'SELECT id FROM tests WHERE id = $1',
+      [req.params.id]
+    )
+    if (exists.length === 0) return reply.status(404).send({ error: 'not found' })
+    const { rows } = await pool.query<TestRun>(
+      `SELECT id, test_id, started_at, finished_at, status, duration_ms, error_message
+       FROM test_runs WHERE test_id = $1 ORDER BY finished_at DESC LIMIT 20`,
+      [req.params.id]
     )
     return reply.send(rows)
   })
