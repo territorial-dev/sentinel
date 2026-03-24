@@ -112,7 +112,7 @@ pnpm workspaces manage the monorepo.
 **Components:** Use **shadcn/ui** (Radix UI headless primitives + Tailwind). Install components individually with `npx shadcn@latest add <component>`. Never wrap shadcn components in additional abstraction layers — edit the generated component file directly if customization is needed.
 
 ### Bundle discipline
-- Monaco is the only large client-side dependency — must be dynamically imported
+- Monaco and **Recharts** are large client-side dependencies — both must be **dynamically imported** (`ssr: false`) where used
 - No heavy UI libraries (no MUI, no Chakra, no Ant Design)
 - shadcn/ui components are code-owned (not a runtime package) — acceptable
 - Public status pages must load fast — no client-side data fetching
@@ -153,6 +153,7 @@ pnpm workspaces manage the monorepo.
 | `clsx` + `tailwind-merge` | Class merging utilities |
 | `lucide-react` | Icon set (used by shadcn) |
 | `@monaco-editor/react` | Code editor (lazy-loaded) |
+| `recharts` | Internal charts (e.g. test detail latency; lazy-loaded) |
 | `zod` | Schema validation (shared) |
 
 **Explicitly banned**: `axios`, `express`, `redis`, `bullmq`, `prisma`, `typeorm`, `sequelize`, `lodash`, `moment`, `@mui/material`, `@chakra-ui/react`, `antd`, `styled-components`
