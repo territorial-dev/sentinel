@@ -289,3 +289,23 @@ AI agents must append an entry here after completing any feature from PROJECT.md
 **Decisions:** Assertions are embedded in the existing runs endpoint (not a separate `GET /:id/runs/:runId/assertions`) to avoid extra per-row round trips from the page. The DB side (`ctx.assert`, `assertion_results` table, batch INSERT in `runTest`) was already complete from F-03.
 
 **Deferred:** None.
+
+---
+
+## 2026-03-24 · F-14 + F-15 · Run Now Button & Real-Time Log Streaming
+
+**What was built:** Added a "Run now" button on the test detail page that streams `ctx.log()` output live via SSE. A new `GET /tests/:id/run/stream` endpoint hijacks the Fastify response and writes SSE frames (`log`, `done`, `error`) as the test executes. The `buildCtx()` and `runTest()` functions accept an optional `onLog` callback, which fires each log immediately rather than buffering. The `RunNowPanel` client component opens an `EventSource`, renders streaming logs in a small console, and shows the final result on completion.
+
+**Files changed:**
+- `apps/api/src/executor/ctx.ts` — added `BuildCtxOptions` interface with `onLog?`; `buildCtx()` calls it on each `ctx.log()`
+- `apps/api/src/executor/run.ts` — `runTest()` accepts optional `onLog` and passes it to `buildCtx()`
+- `apps/api/src/routes/run.ts` — added `GET /:id/run/stream` SSE route using `reply.hijack()` + `reply.raw`
+- `apps/web/app/tests/_components/run-now-panel.tsx` (new) — `RunNowPanel` client component
+- `apps/web/app/tests/[id]/page.tsx` — imports and renders `RunNowPanel` in the header
+
+**Decisions:**
+- Combined GET endpoint (triggers + streams) rather than POST→then→SSE avoids a coordination step; `EventSource` only supports GET natively.
+- `reply.hijack()` gives full control of the raw Node.js socket so Fastify doesn't interfere with SSE headers.
+- `onLog` is optional with no default so scheduler-triggered runs are unaffected (zero regression risk).
+
+**Deferred:** Logs are not persisted to the DB — they are ephemeral, streaming-only. Persisting logs would require a new table and was not part of the spec.
