@@ -1,3 +1,10 @@
+## [1.2.1](https://github.com/territorial-dev/sentinel/compare/v1.2.0...v1.2.1) (2026-03-25)
+
+
+### Bug Fixes
+
+* **ci:** fix badge URLs and replace Codecov with self-hosted coverage badge ([a2c328d](https://github.com/territorial-dev/sentinel/commit/a2c328d5b4c588cd08fa97d4c1b2d5d3bdc1b7e4))
+
 # [1.2.0](https://github.com/territorial-dev/sentinel/compare/v1.1.1...v1.2.0) (2026-03-25)
 
 
