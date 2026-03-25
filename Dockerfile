@@ -15,10 +15,13 @@ RUN pnpm install --frozen-lockfile
 FROM deps AS build-api
 COPY packages/shared packages/shared
 COPY apps/api apps/api
-# Compile TypeScript
+# Compile shared to JS first so pnpm deploy doesn't include raw .ts at runtime
+RUN pnpm --filter @sentinel/shared build
 RUN pnpm --filter @sentinel/api build
-# Create production deployment with only prod node_modules (includes @sentinel/shared)
+# Create production deployment with only prod node_modules
 RUN pnpm --filter @sentinel/api deploy --prod /api-prod
+# pnpm deploy respects .gitignore and skips dist/; copy compiled shared manually
+RUN cp -r /app/packages/shared/dist /api-prod/node_modules/@sentinel/shared/dist
 
 # ---- Build Web ----
 FROM deps AS build-web
@@ -38,12 +41,13 @@ WORKDIR /app
 
 RUN apk add --no-cache caddy
 
-# API: prod node_modules (from pnpm deploy) + compiled dist
+# API: prod node_modules (from pnpm deploy, with compiled shared) + compiled dist
 COPY --from=build-api /api-prod/node_modules /app/apps/api/node_modules
 COPY --from=build-api /app/apps/api/dist /app/apps/api/dist
 
-# Web: Next.js standalone server (self-contained) + static assets + public dir
-COPY --from=build-web /app/apps/web/.next/standalone /app/apps/web
+# Web: outputFileTracingRoot places standalone relative to repo root, so server.js
+# ends up at apps/web/server.js inside the standalone directory
+COPY --from=build-web /app/apps/web/.next/standalone /app/
 COPY --from=build-web /app/apps/web/.next/static /app/apps/web/.next/static
 COPY --from=build-web /app/apps/web/public /app/apps/web/public
 
