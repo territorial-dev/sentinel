@@ -10,6 +10,7 @@
     "dev": "pnpm --parallel -r dev",
     "dev:api": "pnpm --filter @sentinel/api dev",
     "migrate": "pnpm --filter @sentinel/api migrate",
+    "test": "pnpm --filter @sentinel/api test",
     "build": "pnpm -r build",
     "lint": "pnpm -r lint",
     "typecheck": "pnpm -r typecheck"

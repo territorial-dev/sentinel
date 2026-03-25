@@ -8,7 +8,13 @@ To start a feature: move it (or describe it) into **Current Focus**. When done, 
 
 ## Current Focus
 
-_Nothing selected — pick the next task from the backlog below._
+### M-04 · Documentation
+
+Create a small user documentation explaining deployment, creation of tests, and whatever else you feel interesting. Put it on the main README.md
+
+### M-05 · Automated tests
+
+Create an automated test workflow, which should be a pre-requisite to every build workflow. Create a coverage report, add badges to the README
 
 ---
 

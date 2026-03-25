@@ -459,3 +459,27 @@ AI agents must append an entry here after completing any feature from PROJECT.md
 
 **Decisions:** `pnpm deploy` respects `.gitignore` and skips `dist/`; shared dist is built then copied manually into the deploy. SQL files are placed at `dist/db/migrations/` to match `__dirname`-relative paths in compiled migrate.js. Migrations are idempotent so automatic startup runs are safe.
 **Deferred:** Nothing.
+
+## 2026-03-25 · M-04 · Documentation
+
+**What was built:** Rewrote `README.md` with comprehensive user documentation covering deployment (Docker Compose, Cloudflare variant, single container), local development setup, authentication, the full `ctx` API with examples, scheduling parameters, notification channels, status pages, Prometheus metrics, and export/import. Added two Docker Compose files: `docker-compose.yml` (full stack) and `docker-compose.cloudflare.yml` (API + DB only for Cloudflare Pages users).
+**Files changed:**
+- `README.md` — full rewrite
+- `docker-compose.yml` — new, full stack (postgres + sentinel image on port 80)
+- `docker-compose.cloudflare.yml` — new, minimal stack (postgres + sentinel-api on port 3001)
+
+**Decisions:** Kept the existing export/import section content intact. Cloudflare compose uses `sentinel-api` image and exposes port 3001 directly, leaving the web frontend for Cloudflare Pages to host separately.
+**Deferred:** Nothing.
+
+## 2026-03-25 · M-05 · Automated Tests
+
+**What was built:** Added test CI workflow (`test.yml`) that runs on every push and PR to main with a PostgreSQL service container. Coverage reporting via `@vitest/coverage-v8` with JSON output uploaded to Codecov. Updated `release.yml` to run tests as a prerequisite job before semantic-release. Added CI and coverage badges to the README.
+**Files changed:**
+- `.github/workflows/test.yml` — new, runs tests + coverage on push/PR
+- `.github/workflows/release.yml` — added `test` job, made `release` depend on it
+- `apps/api/vitest.config.ts` — added coverage config (v8 provider, JSON reporter)
+- `apps/api/package.json` — added `@vitest/coverage-v8` devDep, `test:coverage` script
+- `package.json` (root) — added `test` script
+
+**Decisions:** Tests require `@sentinel/shared` to be built first; both workflows include a `Build shared package` step before running tests. Coverage threshold not enforced (no `thresholds` config) to avoid breaking CI on new code paths; can be tightened later. The `test` job in `release.yml` duplicates `test.yml` rather than using `workflow_run` to avoid trigger ordering complexity.
+**Deferred:** Web app (`apps/web`) has no test coverage — no framework configured there.
