@@ -1,4 +1,10 @@
-const DATABASE_URL = process.env['DATABASE_URL']
-if (!DATABASE_URL) throw new Error('DATABASE_URL is required')
+function requireEnv(name: string): string {
+  const val = process.env[name]
+  if (!val) throw new Error(`${name} is required`)
+  return val
+}
 
-export { DATABASE_URL }
+export const DATABASE_URL = requireEnv('DATABASE_URL')
+export const ADMIN_USERNAME = requireEnv('ADMIN_USERNAME')
+export const ADMIN_PASSWORD = requireEnv('ADMIN_PASSWORD')
+export const JWT_SECRET = requireEnv('JWT_SECRET')
