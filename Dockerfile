@@ -29,6 +29,8 @@ ENV NEXT_TELEMETRY_DISABLED=1
 COPY packages/shared packages/shared
 COPY apps/web apps/web
 RUN pnpm --filter @sentinel/web build
+# Ensure public dir exists (Next.js requires it but the project may not have one)
+RUN mkdir -p apps/web/public
 
 # ---- Runner ----
 FROM node:20-alpine AS runner
