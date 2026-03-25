@@ -1,3 +1,10 @@
+## [1.2.2](https://github.com/territorial-dev/sentinel/compare/v1.2.1...v1.2.2) (2026-03-25)
+
+
+### Bug Fixes
+
+* **shared:** build shared before dev and ignore dist output ([9e1767b](https://github.com/territorial-dev/sentinel/commit/9e1767b73c15fd5ca4e9ba25c05424f62d9d3b72))
+
 ## [1.2.1](https://github.com/territorial-dev/sentinel/compare/v1.2.0...v1.2.1) (2026-03-25)
 
 
