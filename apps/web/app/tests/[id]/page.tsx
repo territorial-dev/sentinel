@@ -1,11 +1,12 @@
 import Link from 'next/link'
 import { cookies } from 'next/headers'
 import { notFound } from 'next/navigation'
-import type { Test } from '@sentinel/shared'
+import type { Incident, Test } from '@sentinel/shared'
 import { DeleteTestButton } from '../_components/delete-test-button'
 import { RunLatencyChartLoader } from '../_components/run-latency-chart-loader'
 import { RunHistory, type RunRow } from '../_components/run-history'
 import { RunNowPanel } from '../_components/run-now-panel'
+import { IncidentTimeline } from '../_components/incident-timeline'
 import { serverAuthHeaders } from '../../../lib/auth-server'
 
 export const dynamic = 'force-dynamic'
@@ -18,6 +19,17 @@ async function getTest(id: string): Promise<Test | null> {
     return res.json() as Promise<Test>
   } catch {
     return null
+  }
+}
+
+async function getIncidents(id: string): Promise<Incident[]> {
+  const apiUrl = process.env.API_URL ?? 'http://localhost:3001'
+  try {
+    const res = await fetch(`${apiUrl}/tests/${id}/incidents`, { cache: 'no-store', headers: serverAuthHeaders(await cookies()) })
+    if (!res.ok) return []
+    return res.json() as Promise<Incident[]>
+  } catch {
+    return []
   }
 }
 
@@ -54,7 +66,7 @@ export default async function TestDetailPage({ params }: { params: Promise<{ id:
   const { id } = await params
   const test = await getTest(id)
   if (!test) notFound()
-  const runs = await getRuns(id)
+  const [runs, incidents] = await Promise.all([getRuns(id), getIncidents(id)])
 
   return (
     <main className="min-h-screen w-full bg-zinc-950 px-8 py-10">
@@ -101,6 +113,11 @@ export default async function TestDetailPage({ params }: { params: Promise<{ id:
       <section className="mt-14 w-full max-w-none">
         <h2 className="text-zinc-500 text-xs tracking-widest uppercase font-normal">Recent runs</h2>
         <RunHistory runs={runs} />
+      </section>
+
+      <section className="mt-14 w-full max-w-none">
+        <h2 className="text-zinc-500 text-xs tracking-widest uppercase font-normal">Incidents</h2>
+        <IncidentTimeline incidents={incidents} />
       </section>
     </main>
   )
