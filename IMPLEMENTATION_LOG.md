@@ -415,3 +415,15 @@ AI agents must append an entry here after completing any feature from PROJECT.md
 
 **Decisions:** Assignment sync on test save uses a diff approach (fetch existing, add/remove deltas) via `Promise.all` so it's fast and idempotent. The `DISTINCT` in the notifier query handles the case where a channel is assigned both directly to a test and via a shared tag. Tests with no assignments now receive no notifications (correct behavior replacing the old broadcast).
 **Deferred:** Nothing.
+
+## 2026-03-25 · M-01 · Semantic Release
+
+**What was built:** Added semantic-release automation that triggers on every push to `main`, analyzes Conventional Commits to determine the version bump, generates a CHANGELOG.md, bumps the root `package.json` version, commits the changes back, and creates a GitHub Release with the generated notes.
+**Files changed:**
+- `.github/workflows/release.yml` (new) — GitHub Actions workflow
+- `.releaserc.json` (new) — semantic-release plugin configuration
+- `package.json` (root) — added semantic-release and its plugins as devDependencies
+- `pnpm-lock.yaml` — updated lockfile
+
+**Decisions:** All packages are `private: true` so `@semantic-release/npm` is used with `npmPublish: false` solely to handle version bumping in `package.json`. The release commit message includes `[skip ci]` to prevent the workflow from re-triggering on its own commit. `fetch-depth: 0` in the checkout step is required for semantic-release to traverse the full commit history back to the last tag.
+**Deferred:** Nothing.

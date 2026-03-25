@@ -8,7 +8,7 @@ To start a feature: move it (or describe it) into **Current Focus**. When done, 
 
 ## Current Focus
 
-_(nothing — pick the next feature from the backlog)_
+_Nothing selected — pick the next task from the backlog below._
 
 ---
 
@@ -168,7 +168,7 @@ Add a `channel_assignments (channel_id, scope_type: 'test'|'tag', scope_value)` 
 
 ## Maintenance Tasks
 
-### M-01 · Semantic Release
+### ✅ M-01 · Semantic Release
 
 Add a workflow to create semantic releases from this app, generating changelog notes every release
 
