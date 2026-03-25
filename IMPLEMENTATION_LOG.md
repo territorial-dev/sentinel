@@ -427,3 +427,20 @@ AI agents must append an entry here after completing any feature from PROJECT.md
 
 **Decisions:** All packages are `private: true` so `@semantic-release/npm` is used with `npmPublish: false` solely to handle version bumping in `package.json`. The release commit message includes `[skip ci]` to prevent the workflow from re-triggering on its own commit. `fetch-depth: 0` in the checkout step is required for semantic-release to traverse the full commit history back to the last tag.
 **Deferred:** Nothing.
+
+## 2026-03-25 · M-02 + M-03 · Docker Deployment
+
+**What was built:** Two Docker images — `paschendale/sentinel` bundles API + Web in a single container behind a Caddy reverse proxy (API at `/api/*`, Web at `/*`, both on port 80); `paschendale/sentinel-api` is a standalone API-only image on port 3001. Both images are built and pushed to Docker Hub automatically via GitHub Actions on every GitHub release.
+
+**Files changed:**
+- `Dockerfile` (new) — root multi-stage build for M-02 (API + Web + Caddy)
+- `Caddyfile` (new) — Caddy config routing `/api/*` → Fastify:3001, `/*` → Next.js:3000
+- `docker-entrypoint.sh` (new) — starts API + Web in background, Caddy as PID 1
+- `apps/api/Dockerfile` (new) — standalone API-only image for M-03
+- `.github/workflows/docker.yml` (new) — two parallel jobs building both images on release
+- `.dockerignore` (new) — excludes node_modules, dist, .next, .env files
+- `apps/web/next.config.ts` — added `output: 'standalone'` for optimized Docker builds
+
+**Decisions:** `NEXT_PUBLIC_API_URL=/api` is baked into the image at build time so browser calls resolve correctly through Caddy; server components use `API_URL=http://localhost:3001` to call Fastify directly (bypassing the proxy). `pnpm deploy --prod` creates a self-contained API node_modules including `@sentinel/shared` source. Caddy runs as PID 1 to receive SIGTERM cleanly on container stop. The `/api` path was chosen because Next.js App Router has no `app/api/` directory, so there's no routing conflict.
+
+**Deferred:** Nothing.
