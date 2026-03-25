@@ -9,6 +9,7 @@
     "start": "node --env-file .env dist/index.js",
     "typecheck": "tsc --noEmit",
     "migrate": "tsx --env-file .env src/db/migrate.ts",
+    "migrate:ci": "tsx src/db/migrate.ts",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
     "test:watch": "vitest"

@@ -44,6 +44,15 @@ jobs:
       - name: Build shared package
         run: pnpm --filter @sentinel/shared build
 
+      - name: Run database migrations
+        working-directory: apps/api
+        run: pnpm migrate:ci
+        env:
+          DATABASE_URL: postgres://postgres:postgres@localhost:5432/sentinel
+          ADMIN_USERNAME: admin
+          ADMIN_PASSWORD: admin
+          JWT_SECRET: test-secret
+
       - name: Run tests
         working-directory: apps/api
         run: pnpm test
