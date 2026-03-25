@@ -12,6 +12,7 @@ export interface Test {
   enabled: boolean
   failure_threshold: number
   cooldown_ms: number
+  tags: string[]
   created_at: Date
   updated_at: Date
 }
@@ -62,6 +63,7 @@ export interface TestSummary {
   id: string
   name: string
   enabled: boolean
+  tags: string[]
   last_status: TestStatus | null
   last_run_at: string | null
   pass_rate_7d: number | null
@@ -79,6 +81,7 @@ export interface PublicStatusTest {
   id: string
   name: string
   enabled: boolean
+  tags: string[]
   current_status: PublicStatusOutcome
   uptime_pct_30d: number | null
   days: PublicStatusDay[]

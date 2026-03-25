@@ -10,6 +10,7 @@ export const CreateTestSchema = z.object({
   enabled: z.boolean().default(true),
   failure_threshold: z.number().int().min(1).default(3),
   cooldown_ms: z.number().int().min(0).default(300_000),
+  tags: z.array(z.string().min(1).max(50)).max(20).default([]),
 })
 
 export const UpdateTestSchema = CreateTestSchema.partial()
