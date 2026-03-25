@@ -61,6 +61,19 @@ export default async function StatusPage() {
                   {!test.enabled && (
                     <p className="text-zinc-600 text-xs mt-1">disabled</p>
                   )}
+                  {(test.tags ?? []).length > 0 && (
+                    <div className="flex flex-wrap gap-1 mt-2">
+                      {(test.tags ?? []).map(tag => (
+                        <a
+                          key={tag}
+                          href={`/status/${encodeURIComponent(tag)}`}
+                          className="text-xs px-1.5 py-0.5 bg-zinc-800 text-zinc-500 hover:text-zinc-300 rounded-sm transition-colors"
+                        >
+                          {tag}
+                        </a>
+                      ))}
+                    </div>
+                  )}
                 </div>
                 <CurrentLabel status={test.current_status} />
               </div>

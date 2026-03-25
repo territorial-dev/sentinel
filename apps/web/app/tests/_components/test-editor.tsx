@@ -39,6 +39,7 @@ export default function TestEditor({ test }: Props) {
   const [scheduleS, setScheduleS] = useState(String((test?.schedule_ms ?? 60_000) / 1000))
   const [timeoutS, setTimeoutS] = useState(String((test?.timeout_ms ?? 5_000) / 1000))
   const [enabled, setEnabled] = useState(test?.enabled ?? true)
+  const [tagsInput, setTagsInput] = useState((test?.tags ?? []).join(', '))
   const [code, setCode] = useState(test?.code ?? DEFAULT_CODE)
   const [errors, setErrors] = useState<FormErrors>({})
   const [saving, setSaving] = useState(false)
@@ -67,12 +68,15 @@ export default function TestEditor({ test }: Props) {
     setErrors({})
     setSaving(true)
 
+    const tags = tagsInput.split(',').map(t => t.trim()).filter(Boolean)
+
     const body = {
       name: name.trim(),
       code,
       schedule_ms: Number(scheduleS) * 1000,
       timeout_ms: Number(timeoutS) * 1000,
       enabled,
+      tags,
     }
 
     try {
@@ -186,6 +190,25 @@ export default function TestEditor({ test }: Props) {
             className="w-4 h-4 accent-zinc-100"
           />
           <label htmlFor="enabled" className="text-zinc-400 text-sm">Enabled</label>
+        </div>
+
+        {/* Tags */}
+        <div>
+          <label className="block text-zinc-500 text-xs mb-1.5 tracking-wider uppercase">Tags</label>
+          <input
+            type="text"
+            value={tagsInput}
+            onChange={e => setTagsInput(e.target.value)}
+            className="w-full bg-zinc-900 border border-zinc-800 text-zinc-100 text-sm px-3 py-2 outline-none focus:border-zinc-600"
+            placeholder="production, api, billing"
+          />
+          {tagsInput.trim() && (
+            <div className="flex flex-wrap gap-1 mt-2">
+              {tagsInput.split(',').map(t => t.trim()).filter(Boolean).map(tag => (
+                <span key={tag} className="text-xs px-2 py-0.5 bg-zinc-800 text-zinc-400 rounded-sm">{tag}</span>
+              ))}
+            </div>
+          )}
         </div>
 
         <div className="mt-auto flex flex-col gap-2">
