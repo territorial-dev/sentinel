@@ -1,3 +1,10 @@
+## [1.1.1](https://github.com/territorial-dev/sentinel/compare/v1.1.0...v1.1.1) (2026-03-25)
+
+
+### Bug Fixes
+
+* **ci:** copy SQL migrations and api package.json into runner image ([617cd2b](https://github.com/territorial-dev/sentinel/commit/617cd2b88f4c616167bfbd4914cc02848c8fd15a))
+
 # [1.1.0](https://github.com/territorial-dev/sentinel/compare/v1.0.3...v1.1.0) (2026-03-25)
 
 
