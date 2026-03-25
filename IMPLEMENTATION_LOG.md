@@ -16,6 +16,24 @@ AI agents must append an entry here after completing any feature from PROJECT.md
 
 ---
 
+## 2026-03-25 · F-18 · JWT Authentication
+
+**What was built:** HS256 JWT auth using Node.js built-in `crypto` (no new dependency). `POST /auth/login` validates admin credentials from env vars and returns a signed token. All non-public API routes require `Authorization: Bearer <token>` or `?token=` query param (for EventSource SSE). `config.ts` refactored to a `requireEnv()` helper. Web app gets a `/login` page, Next.js middleware for unauthenticated redirects, and auth headers wired into all Server Component fetches and client-side fetch/SSE calls.
+**Files changed:**
+- `apps/api/src/config.ts` (refactored to requireEnv helper, added ADMIN_USERNAME/ADMIN_PASSWORD/JWT_SECRET)
+- `apps/api/src/auth/jwt.ts` (new — HS256 sign/verify)
+- `apps/api/src/routes/auth.ts` (new — POST /auth/login)
+- `apps/api/src/server.ts` (auth onRequest hook, Authorization CORS header, auth route registration)
+- `apps/web/middleware.ts` (new — redirect to /login if no sentinel_token cookie)
+- `apps/web/app/login/page.tsx` (new — login form)
+- `apps/web/lib/auth-client.ts` (new — getToken(), authHeaders() for client components)
+- `apps/web/lib/auth-server.ts` (new — serverAuthHeaders() for Server Components)
+- `apps/web/app/page.tsx`, `apps/web/app/tests/[id]/page.tsx`, `apps/web/app/tests/[id]/edit/page.tsx` (auth headers on server-side fetches)
+- `apps/web/app/tests/_components/test-editor.tsx`, `delete-test-button.tsx`, `run-now-panel.tsx` (auth headers on client fetches; SSE uses ?token=)
+
+**Decisions:** Used Node.js `crypto` module directly for HS256 JWT to avoid adding a dependency. SSE stream accepts `?token=` query param since `EventSource` API cannot send custom headers. JWT stored in a `sentinel_token` cookie (readable by both server and client) so Server Components can forward the token to the API. Middleware only checks cookie existence (not JWT validity) — the API performs actual verification.
+**Deferred:** Token refresh, logout route, and multiple admin users — all deferred for post-MVP.
+
 <!-- entries go here, newest at the bottom -->
 
 ## 2026-03-24 · F-07b · Enriched Notifications + Per-Test Config

@@ -8,7 +8,7 @@ To start a feature: move it (or describe it) into **Current Focus**. When done, 
 
 ## Current Focus
 
-_No feature in progress. Pick the next one from the backlog._
+_(pick the next feature from the backlog below)_
 
 ---
 
@@ -144,7 +144,7 @@ Add `tags: string[]` to the `Test` entity. Filter dashboard by tag. Group-level 
 
 ## Milestone 3 — Auth & Operations
 
-### F-18 · JWT Authentication
+### ✅ F-18 · JWT Authentication
 
 `POST /auth/login` returns a JWT. All non-public API routes require `Authorization: Bearer <token>`. Single hardcoded admin credential for MVP (env vars). Public status pages remain unauthenticated.
 
