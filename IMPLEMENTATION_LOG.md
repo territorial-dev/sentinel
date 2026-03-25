@@ -36,6 +36,29 @@ AI agents must append an entry here after completing any feature from PROJECT.md
 
 <!-- entries go here, newest at the bottom -->
 
+## 2026-03-25 · F-19 · Export / Import Tests
+
+**What was built:** `GET /tests/export` returns all test definitions as a `{ tests: [...] }` JSON object with `id`/`created_at`/`updated_at` stripped (CreateTest-compatible format). `POST /tests/import` accepts the same format, validates every entry with `CreateTestSchema`, bulk-inserts all tests in a single transaction, and emits `test:created` events so the scheduler picks them up immediately.
+**Files changed:**
+- `apps/api/src/routes/tests.ts` — added export and import route handlers
+
+**Decisions:** Import uses an acquired client (not the pool directly) to run `BEGIN`/`COMMIT`/`ROLLBACK` around all inserts; each test gets a fresh `nanoid`. Validation errors are collected per-index and returned as a map so the caller can identify which entries are invalid. Scheduler events are emitted only after the full transaction commits.
+**Deferred:** Notification channels are not exported/imported alongside tests — deferred for a later pass.
+
+---
+
+## 2026-03-25 · F-20 · Incident Timeline
+
+**What was built:** `GET /tests/:id/incidents` queries the last 500 runs for a test (ordered by `started_at`), groups contiguous non-success runs in application code, and returns incidents newest-first. Each incident includes `started_at`, `ended_at`, `duration_ms` (wall time), `failure_count`, and an `ongoing` flag. The test detail page fetches incidents in parallel with runs and renders an `IncidentTimeline` component showing start/end times, duration, and failed check count. Ongoing incidents display a pulsing red "Ongoing" badge.
+**Files changed:**
+- `apps/api/src/routes/tests.ts` — added incidents route handler
+- `packages/shared/src/types.ts` — added `Incident` interface
+- `apps/web/app/tests/[id]/page.tsx` — parallel incident fetch, `<IncidentTimeline>` section
+- `apps/web/app/tests/_components/incident-timeline.tsx` (new) — incident table component
+
+**Decisions:** Derived incidents from `test_runs` in application code rather than adding a new `incidents` table — keeps the schema simple and avoids write-time complexity. The 500-row cap prevents unbounded queries on high-frequency tests while still covering meaningful history. Duration is wall-clock elapsed time (ended_at − started_at) rather than sum of run durations, which is more meaningful for assessing downtime impact.
+**Deferred:** Pagination of incident history; configurable lookback window.
+
 ## 2026-03-24 · F-07b · Enriched Notifications + Per-Test Config
 
 **What was built:** Upgraded notification payloads to include failure reason (error_message), response time, and downtime duration on recovery. Discord uses coloured embeds (red/green); Slack uses attachments with a colour bar. Per-test `failure_threshold` and `cooldown_ms` columns added to the `tests` table via migration `002_notification_config.sql`, replacing the previous hardcoded constants. The DB query in `runNotifications` now JOINs `tests` to read per-test thresholds. `lastNotifiedAt` is captured before being cleared on recovery so the downtime duration can be computed accurately.

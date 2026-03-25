@@ -8,8 +8,6 @@ To start a feature: move it (or describe it) into **Current Focus**. When done, 
 
 ## Current Focus
 
-_(pick the next feature from the backlog below)_
-
 ---
 
 ## Milestone 1 — Core Engine (MVP)
@@ -148,11 +146,11 @@ Add `tags: string[]` to the `Test` entity. Filter dashboard by tag. Group-level 
 
 `POST /auth/login` returns a JWT. All non-public API routes require `Authorization: Bearer <token>`. Single hardcoded admin credential for MVP (env vars). Public status pages remain unauthenticated.
 
-### F-19 · Export / Import Tests
+### ✅ F-19 · Export / Import Tests
 
 `GET /tests/export` returns all test definitions as JSON. `POST /tests/import` bulk-creates tests from the same format. Useful for backup and migration.
 
-### F-20 · Incident Timeline
+### ✅ F-20 · Incident Timeline
 
 On the test detail page, show a timeline of incidents (contiguous failure periods) with start time, end time, and duration. Derived from `test_runs` or a new `incidents` table.
 
