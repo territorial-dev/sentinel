@@ -3,6 +3,23 @@
 A running record of what was built and why. Append-only — do not edit past entries.
 AI agents must append an entry here after completing any feature from PROJECT.md.
 
+## 2026-03-25 · F-23 · Granular Status History
+
+**What was built:** Added a 1h/24h/7d/30d period selector to all status pages and the dashboard. Each period renders a row of equal-width buckets (100 for sub-30d, 30 for 30d) colored green (all pass), yellow (mixed), or red (all fail), with a hover tooltip showing run count, avg latency, and pass/fail breakdown.
+
+**Files changed:**
+- `packages/shared/src/types.ts` — added `StatusPeriod`, `StatusBucket`, `StatusBucketTest` types
+- `apps/api/src/routes/status.ts` — added public `GET /status/buckets?period=&tag=` endpoint; uses `test_runs` (100 buckets) for 1h/24h/7d, `uptime_daily` (30 buckets) for 30d
+- `apps/web/app/status/_components/status-buckets-view.tsx` — new client component rendering bucket boxes + hover tooltip
+- `apps/web/app/status/_components/status-page-content.tsx` — new client wrapper with period state, fetches bucket data, renders all test cards
+- `apps/web/app/status/page.tsx` + `[slug]/page.tsx` — now delegate history rendering to `StatusPageContent`
+- `apps/web/app/_components/dashboard-table.tsx` — new client component; replaces the 7-day pass rate column with a History column + shared period selector
+- `apps/web/app/page.tsx` — passes test list to `DashboardTable`
+
+**Decisions:** The 30d period uses `uptime_daily` (daily granularity, naturally 30 buckets) since `test_runs` are pruned after 7 days. The new yellow "degraded" state distinguishes partial failures from total outages. Uptime % in status page cards is recomputed client-side from bucket totals to reflect the selected period. Status pages remain ISR server components for fast initial load; the client wrapper hydrates and switches periods without a full page reload.
+
+**Deferred:** No per-test independent period selector (all tests on a page share one selector). Dashboard buckets use the same public endpoint — no auth filtering since bucket data is aggregated.
+
 ## 2026-03-24 · F-06 · Daily Aggregation
 
 **What was built:** A daily cron (`aggregator.ts`) that fires at midnight UTC, upserts `uptime_daily` stats from the prior day's `test_runs`, drops `test_runs` monthly partitions older than 7 days, and prunes `uptime_daily` rows older than 90 days. Wired into the process lifecycle alongside the scheduler and result flusher.
