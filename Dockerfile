@@ -44,6 +44,10 @@ RUN apk add --no-cache caddy
 # API: prod node_modules (from pnpm deploy, with compiled shared) + compiled dist
 COPY --from=build-api /api-prod/node_modules /app/apps/api/node_modules
 COPY --from=build-api /app/apps/api/dist /app/apps/api/dist
+# SQL migrations are not processed by tsc — copy from source
+COPY --from=build-api /app/apps/api/src/db/migrations /app/apps/api/dist/db/migrations
+# package.json needed so Node resolves the dist as ESM ("type": "module")
+COPY --from=build-api /app/apps/api/package.json /app/apps/api/package.json
 
 # Web: outputFileTracingRoot places standalone relative to repo root, so server.js
 # ends up at apps/web/server.js inside the standalone directory
