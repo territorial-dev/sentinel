@@ -8,6 +8,10 @@ To start a feature: move it (or describe it) into **Current Focus**. When done, 
 
 ## Current Focus
 
+### F-22 · Channel Assignments
+
+Add a `channel_assignments (channel_id, scope_type: 'test'|'tag', scope_value)` table. API routes to assign/unassign channels to a test or a tag. Update the notifier to resolve channels as the union of direct test assignments and tag-based assignments (deduplicated). Add assignment picker UI to the test editor (per-test channels) and a tag-level assignment panel on the `/channels` page.
+
 ---
 
 ## Milestone 1 — Core Engine (MVP)
@@ -154,7 +158,7 @@ Add `tags: string[]` to the `Test` entity. Filter dashboard by tag. Group-level 
 
 On the test detail page, show a timeline of incidents (contiguous failure periods) with start time, end time, and duration. Derived from `test_runs` or a new `incidents` table.
 
-### F-21 · Notification Channel Management
+### ✅ F-21 · Notification Channel Management
 
 Refactor `notification_channels` into a global named-channel registry: drop `test_id`, add a `name` column. Add CRUD API routes (`POST /channels`, `GET /channels`, `PATCH /channels/:id`, `DELETE /channels/:id`) and a web UI page at `/channels` to create, edit, and delete channels.
 
