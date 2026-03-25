@@ -1,3 +1,15 @@
+# [1.2.0](https://github.com/territorial-dev/sentinel/compare/v1.1.1...v1.2.0) (2026-03-25)
+
+
+### Bug Fixes
+
+* **ci:** run migrations before integration tests ([a2b3c26](https://github.com/territorial-dev/sentinel/commit/a2b3c26633622a0b51322d12f6b17688beec369a))
+
+
+### Features
+
+* **ci:** add automated test workflow with coverage reporting ([ced7b46](https://github.com/territorial-dev/sentinel/commit/ced7b4672fc978871f4985cff0ef4528b4cc3e87))
+
 ## [1.1.1](https://github.com/territorial-dev/sentinel/compare/v1.1.0...v1.1.1) (2026-03-25)
 
 
