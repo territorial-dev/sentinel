@@ -379,3 +379,20 @@ AI agents must append an entry here after completing any feature from PROJECT.md
 **Decisions:** Used PostgreSQL `TEXT[]` for tags — no join table needed at this scale. Tag filtering uses `$1 = ANY(tags)` which is efficient without an index for typical test counts. The filter pill bar derives tags from the currently visible tests; when filtering, "All" resets to show everything. The `/status/[slug]` page returns 404 if no tests match.
 
 **Deferred:** Full-text tag search, tag autocomplete in the editor, and a dedicated tags management page are out of scope.
+
+## 2026-03-25 · F-21 · Notification Channel Management
+
+**What was built:** Refactored `notification_channels` from a test-scoped table into a global named-channel registry. Added CRUD API routes at `/channels` and a `/channels` web page with inline create/edit/delete UI. Updated the notifier to broadcast to all enabled channels (stopgap until F-22 adds assignment-based targeting).
+**Files changed:**
+- `apps/api/src/db/migrations/004_channel_registry.sql` — drops `test_id`, adds `name` with backfill
+- `packages/shared/src/types.ts` — `NotificationChannel`: removed `test_id`, added `name`
+- `packages/shared/src/schemas.ts` — updated `CreateNotificationChannelSchema`, added `UpdateNotificationChannelSchema`
+- `apps/api/src/routes/channels.ts` — new Fastify plugin (GET/POST/PATCH/DELETE)
+- `apps/api/src/server.ts` — registers `channelsRoutes` at `/channels`
+- `apps/api/src/notifier/dispatch.ts` — channel query now uses `CROSS JOIN tests` (no `test_id` filter)
+- `apps/web/app/channels/page.tsx` — server component, fetches and renders channel list
+- `apps/web/app/channels/_components/channel-manager.tsx` — client component with full CRUD UI
+- `apps/web/app/page.tsx` — added channels nav link
+
+**Decisions:** The notifier temporarily broadcasts to ALL enabled channels per test event. This keeps notifications functional between F-21 and F-22 (which will introduce `channel_assignments` for targeted routing). Delete confirmation uses an inline two-step pattern rather than importing AlertDialog across feature boundaries.
+**Deferred:** Assignment of channels to specific tests or tags is deferred to F-22.
