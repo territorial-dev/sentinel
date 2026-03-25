@@ -69,6 +69,14 @@ export interface TestSummary {
   pass_rate_7d: number | null
 }
 
+export interface Incident {
+  started_at: string
+  ended_at: string
+  duration_ms: number
+  failure_count: number
+  ongoing: boolean
+}
+
 /** Public /status page — derived from `uptime_daily` only (no raw runs). */
 export type PublicStatusOutcome = 'up' | 'down' | 'unknown'
 

@@ -1,7 +1,7 @@
 import type { FastifyInstance } from 'fastify'
 import { nanoid } from 'nanoid'
 import { CreateTestSchema, UpdateTestSchema } from '@sentinel/shared'
-import type { AssertionResult, Test, TestRun } from '@sentinel/shared'
+import type { AssertionResult, Incident, Test, TestRun } from '@sentinel/shared'
 import { pool } from '../db/pool.js'
 import { invalidateCache } from '../executor/compile.js'
 import { testEvents } from '../events.js'
@@ -23,6 +23,54 @@ export async function testsRoutes(app: FastifyInstance): Promise<void> {
     )
     testEvents.emit('test:created', rows[0])
     return reply.status(201).send(rows[0])
+  })
+
+  // GET /tests/export
+  app.get('/export', async (_req, reply) => {
+    const { rows } = await pool.query<Test>('SELECT * FROM tests ORDER BY created_at ASC')
+    const tests = rows.map(({ id: _id, created_at: _c, updated_at: _u, ...rest }) => rest)
+    return reply.send({ tests })
+  })
+
+  // POST /tests/import
+  app.post<{ Body: unknown }>('/import', async (req, reply) => {
+    const body = req.body as { tests?: unknown[] }
+    if (!Array.isArray(body?.tests)) {
+      return reply.status(400).send({ error: 'body must have a "tests" array' })
+    }
+    const errors: Record<number, unknown> = {}
+    const valid: ReturnType<typeof CreateTestSchema.parse>[] = []
+    for (let i = 0; i < body.tests.length; i++) {
+      const parsed = CreateTestSchema.safeParse(body.tests[i])
+      if (!parsed.success) errors[i] = parsed.error.flatten()
+      else valid.push(parsed.data)
+    }
+    if (Object.keys(errors).length > 0) {
+      return reply.status(400).send({ error: 'validation failed', errors })
+    }
+    const client = await pool.connect()
+    const created: Test[] = []
+    try {
+      await client.query('BEGIN')
+      for (const d of valid) {
+        const id = nanoid()
+        const { rows } = await client.query<Test>(
+          `INSERT INTO tests (id, name, code, schedule_ms, timeout_ms, retries, uses_browser, enabled, tags)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+           RETURNING *`,
+          [id, d.name, d.code, d.schedule_ms, d.timeout_ms, d.retries, d.uses_browser, d.enabled, d.tags]
+        )
+        if (rows[0]) created.push(rows[0])
+      }
+      await client.query('COMMIT')
+    } catch (err) {
+      await client.query('ROLLBACK')
+      throw err
+    } finally {
+      client.release()
+    }
+    for (const t of created) testEvents.emit('test:created', t)
+    return reply.status(201).send({ created: created.length, tests: created })
   })
 
   // GET /tests
@@ -61,6 +109,54 @@ export async function testsRoutes(app: FastifyInstance): Promise<void> {
       byRunId.set(a.test_run_id, list)
     }
     return reply.send(rows.map(r => ({ ...r, assertions: byRunId.get(r.id) ?? [] })))
+  })
+
+  // GET /tests/:id/incidents
+  app.get<{ Params: { id: string } }>('/:id/incidents', async (req, reply) => {
+    const { rows: exists } = await pool.query<{ id: string }>(
+      'SELECT id FROM tests WHERE id = $1',
+      [req.params.id]
+    )
+    if (exists.length === 0) return reply.status(404).send({ error: 'not found' })
+    const { rows } = await pool.query<{ started_at: Date; finished_at: Date; status: string }>(
+      `SELECT started_at, finished_at, status FROM test_runs
+       WHERE test_id = $1 ORDER BY started_at ASC LIMIT 500`,
+      [req.params.id]
+    )
+    const incidents: Incident[] = []
+    let current: { started_at: Date; ended_at: Date; count: number } | null = null
+    for (const run of rows) {
+      if (run.status !== 'success') {
+        if (!current) {
+          current = { started_at: run.started_at, ended_at: run.finished_at, count: 1 }
+        } else {
+          current.ended_at = run.finished_at
+          current.count++
+        }
+      } else {
+        if (current) {
+          incidents.push({
+            started_at: current.started_at.toISOString(),
+            ended_at: current.ended_at.toISOString(),
+            duration_ms: current.ended_at.getTime() - current.started_at.getTime(),
+            failure_count: current.count,
+            ongoing: false,
+          })
+          current = null
+        }
+      }
+    }
+    if (current) {
+      incidents.push({
+        started_at: current.started_at.toISOString(),
+        ended_at: current.ended_at.toISOString(),
+        duration_ms: current.ended_at.getTime() - current.started_at.getTime(),
+        failure_count: current.count,
+        ongoing: true,
+      })
+    }
+    incidents.reverse()
+    return reply.send(incidents)
   })
 
   // GET /tests/:id
