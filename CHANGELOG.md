@@ -1,3 +1,10 @@
+## [1.0.1](https://github.com/territorial-dev/sentinel/compare/v1.0.0...v1.0.1) (2026-03-25)
+
+
+### Bug Fixes
+
+* **ci:** trigger Docker builds from release job outputs, not release event ([a9dc2a7](https://github.com/territorial-dev/sentinel/commit/a9dc2a7b6ef2a2be98a360b3b787054611c1c204))
+
 # 1.0.0 (2026-03-25)
 
 
