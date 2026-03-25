@@ -3,8 +3,9 @@ conversation.json
 .env
 .env.local
 
-# API build output
+# Build outputs
 apps/api/dist/
+packages/shared/dist/
 
 # Next.js
 .next/

@@ -7,7 +7,7 @@
     "pnpm": ">=9"
   },
   "scripts": {
-    "dev": "pnpm --parallel -r dev",
+    "dev": "pnpm --filter @sentinel/shared build && pnpm --parallel -r dev",
     "dev:api": "pnpm --filter @sentinel/api dev",
     "migrate": "pnpm --filter @sentinel/api migrate",
     "test": "pnpm --filter @sentinel/api test",
