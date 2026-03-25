@@ -2,8 +2,8 @@
 
 A lightweight synthetic testing and uptime monitoring platform for developers.
 
-![Test](https://github.com/paschendale/sentinel/actions/workflows/test.yml/badge.svg)
-[![codecov](https://codecov.io/gh/paschendale/sentinel/branch/main/graph/badge.svg)](https://codecov.io/gh/paschendale/sentinel)
+[![Test](https://github.com/territorial-dev/sentinel/actions/workflows/test.yml/badge.svg)](https://github.com/territorial-dev/sentinel/actions/workflows/test.yml)
+![Coverage](.badges/coverage.svg)
 [![Docker](https://img.shields.io/docker/v/paschendale/sentinel?label=docker)](https://hub.docker.com/r/paschendale/sentinel)
 
 ---
