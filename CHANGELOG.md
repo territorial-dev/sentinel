@@ -1,3 +1,10 @@
+# [1.1.0](https://github.com/territorial-dev/sentinel/compare/v1.0.3...v1.1.0) (2026-03-25)
+
+
+### Features
+
+* **db:** run migrations automatically on API startup ([6fddd12](https://github.com/territorial-dev/sentinel/commit/6fddd121c57347ef3f682bae804e1bc3b4f92728))
+
 ## [1.0.3](https://github.com/territorial-dev/sentinel/compare/v1.0.2...v1.0.3) (2026-03-25)
 
 
