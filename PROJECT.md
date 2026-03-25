@@ -172,11 +172,11 @@ Add a `channel_assignments (channel_id, scope_type: 'test'|'tag', scope_value)` 
 
 Add a workflow to create semantic releases from this app, generating changelog notes every release
 
-### M-02 · Single Deployment Through Docker
+### ✅ M-02 · Single Deployment Through Docker
 
 Create a Dockerfile to pack everything (API + APP) into a single deployment. Create a CI to build it whenever there's a new release. Use the tag paschendale/sentinel
 
-### M-03 · Standalone API Deployment
+### ✅ M-03 · Standalone API Deployment
 
 Create a Dockerfile to pack the API into a standalone deployment, useful when working with Cloudflare. Create a CI to build it whenever there's a new release. Use the tag paschendale/sentinel-api
 

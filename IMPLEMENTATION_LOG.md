@@ -444,3 +444,18 @@ AI agents must append an entry here after completing any feature from PROJECT.md
 **Decisions:** `NEXT_PUBLIC_API_URL=/api` is baked into the image at build time so browser calls resolve correctly through Caddy; server components use `API_URL=http://localhost:3001` to call Fastify directly (bypassing the proxy). `pnpm deploy --prod` creates a self-contained API node_modules including `@sentinel/shared` source. Caddy runs as PID 1 to receive SIGTERM cleanly on container stop. The `/api` path was chosen because Next.js App Router has no `app/api/` directory, so there's no routing conflict.
 
 **Deferred:** Nothing.
+
+## 2026-03-25 · M-02 + M-03 · Docker runtime fixes
+
+**What was built:** Resolved four runtime failures in the sentinel Docker image: missing `server.js` (Next.js standalone path in pnpm monorepo), `@sentinel/shared` TypeScript source being imported at runtime, missing SQL migration files in the runner, and missing `apps/api/package.json` causing an ESM type warning. Also wired migrations to run automatically on API startup.
+**Files changed:**
+- `Dockerfile` — added `outputFileTracingRoot`-aware standalone COPY, SQL migrations COPY, api package.json COPY, compiled shared dist copy
+- `apps/api/Dockerfile` — same SQL migrations and package.json fixes
+- `apps/web/next.config.ts` — added `outputFileTracingRoot` for correct monorepo standalone output
+- `packages/shared/package.json` — added `build` script, changed exports default to `./dist/index.js`
+- `packages/shared/tsconfig.json` — added `outDir`/`rootDir` for compilation
+- `apps/api/src/db/migrate.ts` — exported `migrate()` function, kept CLI auto-run via argv guard
+- `apps/api/src/index.ts` — call `migrate()` before server startup
+
+**Decisions:** `pnpm deploy` respects `.gitignore` and skips `dist/`; shared dist is built then copied manually into the deploy. SQL files are placed at `dist/db/migrations/` to match `__dirname`-relative paths in compiled migrate.js. Migrations are idempotent so automatic startup runs are safe.
+**Deferred:** Nothing.
