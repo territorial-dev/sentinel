@@ -2,7 +2,9 @@ import { buildServer } from './server.js'
 import { startScheduler, stopScheduler } from './scheduler/index.js'
 import { startFlusher, stopFlusher, flush } from './db/result-buffer.js'
 import { startAggregator, stopAggregator } from './db/aggregator.js'
+import { migrate } from './db/migrate.js'
 
+await migrate()
 const app = await buildServer()
 await startScheduler()
 startFlusher()

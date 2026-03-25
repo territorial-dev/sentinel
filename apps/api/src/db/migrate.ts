@@ -77,7 +77,12 @@ async function run(): Promise<void> {
   }
 }
 
-run().catch((err) => {
-  console.error(err instanceof Error ? err.message : err)
-  process.exit(1)
-})
+export { run as migrate }
+
+// Auto-run when executed directly (pnpm migrate)
+if (process.argv[1] === fileURLToPath(import.meta.url)) {
+  run().catch((err) => {
+    console.error(err instanceof Error ? err.message : err)
+    process.exit(1)
+  })
+}
