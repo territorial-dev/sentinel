@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
+import { getToken } from '../../../lib/auth-client'
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001'
 
@@ -43,7 +44,11 @@ export function RunNowPanel({ testId }: Props) {
     setError(null)
     setConsoleOpen(true)
 
-    const es = new EventSource(`${API_URL}/tests/${testId}/run/stream`)
+    const token = getToken()
+    const streamUrl = token
+      ? `${API_URL}/tests/${testId}/run/stream?token=${encodeURIComponent(token)}`
+      : `${API_URL}/tests/${testId}/run/stream`
+    const es = new EventSource(streamUrl)
     esRef.current = es
 
     es.addEventListener('log', (e) => {

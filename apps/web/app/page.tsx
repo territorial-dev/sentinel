@@ -1,5 +1,7 @@
 import Link from 'next/link'
+import { cookies } from 'next/headers'
 import type { TestSummary } from '@sentinel/shared'
+import { serverAuthHeaders } from '../lib/auth-server'
 
 export const dynamic = 'force-dynamic'
 
@@ -7,7 +9,7 @@ async function getTests(tag?: string): Promise<TestSummary[]> {
   const apiUrl = process.env.API_URL ?? 'http://localhost:3001'
   try {
     const url = tag ? `${apiUrl}/dashboard?tag=${encodeURIComponent(tag)}` : `${apiUrl}/dashboard`
-    const res = await fetch(url, { cache: 'no-store' })
+    const res = await fetch(url, { cache: 'no-store', headers: serverAuthHeaders(await cookies()) })
     if (!res.ok) return []
     return res.json() as Promise<TestSummary[]>
   } catch {

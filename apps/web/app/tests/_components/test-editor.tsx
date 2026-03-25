@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 import type { Test } from '@sentinel/shared'
+import { authHeaders } from '../../../lib/auth-client'
 
 const MonacoEditor = dynamic(() => import('@monaco-editor/react'), { ssr: false })
 
@@ -84,7 +85,7 @@ export default function TestEditor({ test }: Props) {
       const method = isNew ? 'POST' : 'PATCH'
       const res = await fetch(url, {
         method,
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...authHeaders() },
         body: JSON.stringify(body),
       })
       if (!res.ok) {
@@ -109,7 +110,7 @@ export default function TestEditor({ test }: Props) {
     setRunning(true)
     setRunResult(null)
     try {
-      const res = await fetch(`${API_URL}/tests/${test.id}/run`, { method: 'POST' })
+      const res = await fetch(`${API_URL}/tests/${test.id}/run`, { method: 'POST', headers: authHeaders() })
       if (!res.ok) {
         const data = await res.json().catch(() => ({}))
         setRunResult({ status: 'fail', duration_ms: 0, error_message: (data as { error?: string }).error ?? 'Run failed.' })

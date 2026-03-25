@@ -1,11 +1,13 @@
+import { cookies } from 'next/headers'
 import { notFound } from 'next/navigation'
 import type { Test } from '@sentinel/shared'
 import TestEditor from '../../_components/test-editor'
+import { serverAuthHeaders } from '../../../../lib/auth-server'
 
 async function getTest(id: string): Promise<Test | null> {
   const apiUrl = process.env.API_URL ?? 'http://localhost:3001'
   try {
-    const res = await fetch(`${apiUrl}/tests/${id}`, { cache: 'no-store' })
+    const res = await fetch(`${apiUrl}/tests/${id}`, { cache: 'no-store', headers: serverAuthHeaders(await cookies()) })
     if (!res.ok) return null
     return res.json() as Promise<Test>
   } catch {

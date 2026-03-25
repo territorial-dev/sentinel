@@ -1,17 +1,19 @@
 import Link from 'next/link'
+import { cookies } from 'next/headers'
 import { notFound } from 'next/navigation'
 import type { Test } from '@sentinel/shared'
 import { DeleteTestButton } from '../_components/delete-test-button'
 import { RunLatencyChartLoader } from '../_components/run-latency-chart-loader'
 import { RunHistory, type RunRow } from '../_components/run-history'
 import { RunNowPanel } from '../_components/run-now-panel'
+import { serverAuthHeaders } from '../../../lib/auth-server'
 
 export const dynamic = 'force-dynamic'
 
 async function getTest(id: string): Promise<Test | null> {
   const apiUrl = process.env.API_URL ?? 'http://localhost:3001'
   try {
-    const res = await fetch(`${apiUrl}/tests/${id}`, { cache: 'no-store' })
+    const res = await fetch(`${apiUrl}/tests/${id}`, { cache: 'no-store', headers: serverAuthHeaders(await cookies()) })
     if (!res.ok) return null
     return res.json() as Promise<Test>
   } catch {
@@ -22,7 +24,7 @@ async function getTest(id: string): Promise<Test | null> {
 async function getRuns(id: string): Promise<RunRow[]> {
   const apiUrl = process.env.API_URL ?? 'http://localhost:3001'
   try {
-    const res = await fetch(`${apiUrl}/tests/${id}/runs`, { cache: 'no-store' })
+    const res = await fetch(`${apiUrl}/tests/${id}/runs`, { cache: 'no-store', headers: serverAuthHeaders(await cookies()) })
     if (!res.ok) return []
     const rows = (await res.json()) as Array<{
       id: string
