@@ -1,3 +1,10 @@
+## [1.0.2](https://github.com/territorial-dev/sentinel/compare/v1.0.1...v1.0.2) (2026-03-25)
+
+
+### Bug Fixes
+
+* **ci:** create public dir in build-web stage if missing ([1371379](https://github.com/territorial-dev/sentinel/commit/1371379e10ce9538b9432f2edc53ca1496447503))
+
 ## [1.0.1](https://github.com/territorial-dev/sentinel/compare/v1.0.0...v1.0.1) (2026-03-25)
 
 
