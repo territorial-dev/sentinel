@@ -3,8 +3,8 @@
 import dynamic from 'next/dynamic'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { useState } from 'react'
-import type { Test } from '@sentinel/shared'
+import { useState, useEffect } from 'react'
+import type { Test, NotificationChannel } from '@sentinel/shared'
 import { authHeaders } from '../../../lib/auth-client'
 
 const MonacoEditor = dynamic(() => import('@monaco-editor/react'), { ssr: false })
@@ -46,6 +46,22 @@ export default function TestEditor({ test }: Props) {
   const [saving, setSaving] = useState(false)
   const [running, setRunning] = useState(false)
   const [runResult, setRunResult] = useState<RunResult | null>(null)
+  const [availableChannels, setAvailableChannels] = useState<NotificationChannel[]>([])
+  const [assignedChannelIds, setAssignedChannelIds] = useState<string[]>([])
+  const [channelPickerValue, setChannelPickerValue] = useState('')
+
+  useEffect(() => {
+    fetch(`${API_URL}/channels`, { headers: authHeaders() })
+      .then(r => r.ok ? r.json() as Promise<NotificationChannel[]> : [])
+      .then(setAvailableChannels)
+      .catch(() => {})
+    if (test) {
+      fetch(`${API_URL}/tests/${test.id}/channels`, { headers: authHeaders() })
+        .then(r => r.ok ? r.json() as Promise<NotificationChannel[]> : [])
+        .then(chs => setAssignedChannelIds(chs.map(c => c.id)))
+        .catch(() => {})
+    }
+  }, [test?.id])
 
   const codeDirty = !!test && code !== test.code
 
@@ -93,6 +109,33 @@ export default function TestEditor({ test }: Props) {
         setErrors({ submit: (data as { message?: string }).message ?? 'Save failed.' })
         return
       }
+      const saved = await res.json() as Test
+      const testId = saved.id
+
+      // Sync channel assignments
+      if (isNew || test) {
+        const existingRes = await fetch(`${API_URL}/tests/${testId}/channels`, { headers: authHeaders() })
+        const existing: NotificationChannel[] = existingRes.ok ? await existingRes.json() as NotificationChannel[] : []
+        const existingIds = new Set(existing.map(c => c.id))
+        const desiredIds = new Set(assignedChannelIds)
+
+        await Promise.all([
+          ...[...desiredIds].filter(id => !existingIds.has(id)).map(id =>
+            fetch(`${API_URL}/tests/${testId}/channels`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', ...authHeaders() },
+              body: JSON.stringify({ channel_id: id }),
+            })
+          ),
+          ...[...existingIds].filter(id => !desiredIds.has(id)).map(id =>
+            fetch(`${API_URL}/tests/${testId}/channels/${id}`, {
+              method: 'DELETE',
+              headers: authHeaders(),
+            })
+          ),
+        ])
+      }
+
       if (isNew) {
         router.push('/')
       } else if (test) {
@@ -209,6 +252,53 @@ export default function TestEditor({ test }: Props) {
                 <span key={tag} className="text-xs px-2 py-0.5 bg-zinc-800 text-zinc-400 rounded-sm">{tag}</span>
               ))}
             </div>
+          )}
+        </div>
+
+        {/* Channels */}
+        <div>
+          <label className="block text-zinc-500 text-xs mb-1.5 tracking-wider uppercase">Channels</label>
+          {assignedChannelIds.length > 0 && (
+            <div className="flex flex-wrap gap-1 mb-2">
+              {assignedChannelIds.map(id => {
+                const ch = availableChannels.find(c => c.id === id)
+                return ch ? (
+                  <span key={id} className="flex items-center gap-1 text-xs px-2 py-0.5 bg-zinc-800 text-zinc-400 rounded-sm">
+                    {ch.name}
+                    <button
+                      type="button"
+                      onClick={() => setAssignedChannelIds(prev => prev.filter(x => x !== id))}
+                      className="text-zinc-600 hover:text-zinc-300 leading-none"
+                    >
+                      ×
+                    </button>
+                  </span>
+                ) : null
+              })}
+            </div>
+          )}
+          {availableChannels.filter(c => !assignedChannelIds.includes(c.id)).length > 0 && (
+            <select
+              value={channelPickerValue}
+              onChange={e => {
+                const id = e.target.value
+                if (id) {
+                  setAssignedChannelIds(prev => [...prev, id])
+                  setChannelPickerValue('')
+                }
+              }}
+              className="w-full bg-zinc-900 border border-zinc-800 text-zinc-400 text-sm px-3 py-2 outline-none focus:border-zinc-600"
+            >
+              <option value="">+ add channel</option>
+              {availableChannels
+                .filter(c => !assignedChannelIds.includes(c.id))
+                .map(c => (
+                  <option key={c.id} value={c.id}>{c.name} ({c.type})</option>
+                ))}
+            </select>
+          )}
+          {availableChannels.length === 0 && (
+            <p className="text-zinc-600 text-xs">No channels configured.</p>
           )}
         </div>
 

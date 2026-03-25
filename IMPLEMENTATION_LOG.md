@@ -396,3 +396,22 @@ AI agents must append an entry here after completing any feature from PROJECT.md
 
 **Decisions:** The notifier temporarily broadcasts to ALL enabled channels per test event. This keeps notifications functional between F-21 and F-22 (which will introduce `channel_assignments` for targeted routing). Delete confirmation uses an inline two-step pattern rather than importing AlertDialog across feature boundaries.
 **Deferred:** Assignment of channels to specific tests or tags is deferred to F-22.
+
+## 2026-03-25 · F-22 · Channel Assignments
+
+**What was built:** Added a `channel_assignments` table that maps notification channels to tests or tags. API routes let you assign/unassign channels per test (`/tests/:id/channels`) and per tag (`/tags/:tag/channels`). The notifier's broadcast `CROSS JOIN` was replaced with a targeted query that resolves channels as the union of direct test assignments and tag-based assignments (deduplicated via `DISTINCT`). A channel picker (pills + dropdown) was added to the test editor, and a tag assignment panel was added to `/channels`.
+**Files changed:**
+- `apps/api/src/db/migrations/005_channel_assignments.sql` (new)
+- `apps/api/src/db/queries/assignments.ts` (new)
+- `apps/api/src/routes/tags.ts` (new)
+- `apps/api/src/routes/tests.ts` — added GET/POST/DELETE `/:id/channels` routes
+- `apps/api/src/server.ts` — registered tags router
+- `apps/api/src/notifier/dispatch.ts` — replaced CROSS JOIN with assignment-based query
+- `packages/shared/src/types.ts` — added `ChannelAssignment` interface
+- `packages/shared/src/schemas.ts` — added `CreateAssignmentSchema`
+- `apps/web/app/tests/_components/test-editor.tsx` — added channel picker UI
+- `apps/web/app/channels/page.tsx` — fetch tags and tag assignments server-side
+- `apps/web/app/channels/_components/tag-assignment-panel.tsx` (new)
+
+**Decisions:** Assignment sync on test save uses a diff approach (fetch existing, add/remove deltas) via `Promise.all` so it's fast and idempotent. The `DISTINCT` in the notifier query handles the case where a channel is assigned both directly to a test and via a shared tag. Tests with no assignments now receive no notifications (correct behavior replacing the old broadcast).
+**Deferred:** Nothing.

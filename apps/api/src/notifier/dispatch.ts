@@ -84,10 +84,15 @@ async function dispatchForTest(
     webhook_url: string
     test_name: string
   }>(
-    `SELECT nc.type, nc.webhook_url, t.name AS test_name
+    `SELECT DISTINCT nc.type, nc.webhook_url, t.name AS test_name
      FROM notification_channels nc
-     CROSS JOIN tests t
-     WHERE t.id = $1 AND nc.enabled = TRUE`,
+     JOIN tests t ON t.id = $1
+     WHERE nc.enabled = TRUE
+       AND nc.id IN (
+         SELECT ca.channel_id FROM channel_assignments ca
+         WHERE (ca.scope_type = 'test' AND ca.scope_value = $1)
+            OR (ca.scope_type = 'tag'  AND ca.scope_value = ANY(t.tags))
+       )`,
     [testId],
   )
 

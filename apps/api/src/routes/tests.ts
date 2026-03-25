@@ -1,10 +1,11 @@
 import type { FastifyInstance } from 'fastify'
 import { nanoid } from 'nanoid'
-import { CreateTestSchema, UpdateTestSchema } from '@sentinel/shared'
+import { CreateTestSchema, UpdateTestSchema, CreateAssignmentSchema } from '@sentinel/shared'
 import type { AssertionResult, Incident, Test, TestRun } from '@sentinel/shared'
 import { pool } from '../db/pool.js'
 import { invalidateCache } from '../executor/compile.js'
 import { testEvents } from '../events.js'
+import { getAssignedChannels, addAssignment, removeAssignment } from '../db/queries/assignments.js'
 
 export async function testsRoutes(app: FastifyInstance): Promise<void> {
   // POST /tests
@@ -200,6 +201,41 @@ export async function testsRoutes(app: FastifyInstance): Promise<void> {
     if (result.rowCount === 0) return reply.status(404).send({ error: 'not found' })
     invalidateCache(req.params.id)
     testEvents.emit('test:deleted', req.params.id)
+    return reply.status(204).send()
+  })
+
+  // GET /tests/:id/channels
+  app.get<{ Params: { id: string } }>('/:id/channels', async (req, reply) => {
+    const { rows: exists } = await pool.query<{ id: string }>(
+      'SELECT id FROM tests WHERE id = $1',
+      [req.params.id]
+    )
+    if (exists.length === 0) return reply.status(404).send({ error: 'not found' })
+    const channels = await getAssignedChannels('test', req.params.id)
+    return reply.send(channels)
+  })
+
+  // POST /tests/:id/channels
+  app.post<{ Params: { id: string }; Body: unknown }>('/:id/channels', async (req, reply) => {
+    const { rows: exists } = await pool.query<{ id: string }>(
+      'SELECT id FROM tests WHERE id = $1',
+      [req.params.id]
+    )
+    if (exists.length === 0) return reply.status(404).send({ error: 'not found' })
+    const parsed = CreateAssignmentSchema.safeParse(req.body)
+    if (!parsed.success) return reply.status(400).send({ error: parsed.error.flatten() })
+    const { rows: chExists } = await pool.query<{ id: string }>(
+      'SELECT id FROM notification_channels WHERE id = $1',
+      [parsed.data.channel_id]
+    )
+    if (chExists.length === 0) return reply.status(404).send({ error: 'channel not found' })
+    await addAssignment(parsed.data.channel_id, 'test', req.params.id)
+    return reply.status(201).send()
+  })
+
+  // DELETE /tests/:id/channels/:channel_id
+  app.delete<{ Params: { id: string; channel_id: string } }>('/:id/channels/:channel_id', async (req, reply) => {
+    await removeAssignment(req.params.channel_id, 'test', req.params.id)
     return reply.status(204).send()
   })
 }

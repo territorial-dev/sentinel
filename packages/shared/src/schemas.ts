@@ -24,7 +24,12 @@ export const CreateNotificationChannelSchema = z.object({
 
 export const UpdateNotificationChannelSchema = CreateNotificationChannelSchema.partial()
 
+export const CreateAssignmentSchema = z.object({
+  channel_id: z.string().min(1),
+})
+
 export type CreateTestInput = z.infer<typeof CreateTestSchema>
 export type UpdateTestInput = z.infer<typeof UpdateTestSchema>
 export type CreateNotificationChannelInput = z.infer<typeof CreateNotificationChannelSchema>
 export type UpdateNotificationChannelInput = z.infer<typeof UpdateNotificationChannelSchema>
+export type CreateAssignmentInput = z.infer<typeof CreateAssignmentSchema>

@@ -51,6 +51,12 @@ export interface NotificationChannel {
   enabled: boolean
 }
 
+export interface ChannelAssignment {
+  channel_id: string
+  scope_type: 'test' | 'tag'
+  scope_value: string
+}
+
 export interface TestState {
   test_id: string
   last_status: TestStatus | null
