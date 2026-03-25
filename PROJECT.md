@@ -8,6 +8,8 @@ To start a feature: move it (or describe it) into **Current Focus**. When done, 
 
 ## Current Focus
 
+_No feature in progress. Pick the next one from the backlog._
+
 ---
 
 ## Milestone 1 — Core Engine (MVP)
@@ -134,7 +136,7 @@ When a "run now" is triggered, stream `ctx.log()` output back to the browser via
 
 Per-test opt-in (`uses_browser: true`). Separate execution queue with `p-limit(1)`. Playwright launched as a child process, not in the main event loop. Results recorded same as HTTP tests.
 
-### F-17 · Test Groups & Tags
+### ✅ F-17 · Test Groups & Tags
 
 Add `tags: string[]` to the `Test` entity. Filter dashboard by tag. Group-level public status page at `/status/[tag]`.
 

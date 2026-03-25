@@ -319,3 +319,22 @@ AI agents must append an entry here after completing any feature from PROJECT.md
 **Files changed:**
 - `apps/web/app/tests/_components/run-now-panel.tsx` — refactored to `<>` fragment: inline button/badge + fixed floating console
 - `apps/web/app/tests/[id]/page.tsx` — changed header alignment from `items-baseline` to `items-center`
+
+## 2026-03-25 · F-17 · Test Groups & Tags
+
+**What was built:** Added `tags: string[]` to the `Test` entity. Tags are stored as a PostgreSQL `TEXT[]` column. The dashboard now shows clickable tag pills per test and a tag filter bar (`/?tag=<name>`). The test editor has a comma-separated tags input field. A new public status page at `/status/[slug]` renders uptime data for all tests with that tag. The main `/status` page links to tag pages via tag pills on each card.
+
+**Files changed:**
+- `apps/api/src/db/migrations/003_tags.sql` — new migration adding `tags TEXT[] NOT NULL DEFAULT '{}'`
+- `packages/shared/src/types.ts` — `tags` added to `Test`, `TestSummary`, `PublicStatusTest`
+- `packages/shared/src/schemas.ts` — `tags` added to `CreateTestSchema` (max 20 tags, each max 50 chars)
+- `apps/api/src/routes/tests.ts` — INSERT includes `tags`; GET supports `?tag=` filter
+- `apps/api/src/routes/dashboard.ts` — `tags` in SELECT; `?tag=` filter on `WHERE $1 = ANY(t.tags)`
+- `apps/api/src/routes/status.ts` — `tags` in TestRow; new `GET /status/tag/:tag` route
+- `apps/web/app/tests/_components/test-editor.tsx` — comma-separated tags input with live pill preview
+- `apps/web/app/page.tsx` — tag filter pill bar; tag pills on each test row
+- `apps/web/app/status/[slug]/page.tsx` — new ISR page fetching `/status/tag/:slug`
+
+**Decisions:** Used PostgreSQL `TEXT[]` for tags — no join table needed at this scale. Tag filtering uses `$1 = ANY(tags)` which is efficient without an index for typical test counts. The filter pill bar derives tags from the currently visible tests; when filtering, "All" resets to show everything. The `/status/[slug]` page returns 404 if no tests match.
+
+**Deferred:** Full-text tag search, tag autocomplete in the editor, and a dedicated tags management page are out of scope.
