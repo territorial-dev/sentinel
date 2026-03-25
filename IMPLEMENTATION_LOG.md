@@ -483,3 +483,24 @@ AI agents must append an entry here after completing any feature from PROJECT.md
 
 **Decisions:** Tests require `@sentinel/shared` to be built first; both workflows include a `Build shared package` step before running tests. Coverage threshold not enforced (no `thresholds` config) to avoid breaking CI on new code paths; can be tightened later. The `test` job in `release.yml` duplicates `test.yml` rather than using `workflow_run` to avoid trigger ordering complexity.
 **Deferred:** Web app (`apps/web`) has no test coverage — no framework configured there.
+
+## 2026-03-25 · M-05 · CI fix — run migrations before integration tests
+
+**What was built:** Integration tests require the Postgres schema to exist before running. Added a `migrate:ci` script (no `--env-file` flag, which Node 20 rejects when the file is absent) and a migration step in both `test.yml` and `release.yml` that runs before the test step using workflow env vars.
+**Files changed:**
+- `apps/api/package.json` — added `migrate:ci` script
+- `.github/workflows/test.yml` — added migration step
+- `.github/workflows/release.yml` — added migration step
+
+**Decisions:** Kept the original `migrate` script unchanged (uses `--env-file .env` for local dev). The CI variant skips that flag since env vars are injected by the workflow.
+**Deferred:** Nothing.
+
+## 2026-03-25 · M-05 · CI fix — correct badge URLs and self-hosted coverage badge
+
+**What was built:** Fixed test badge URL (was pointing to wrong org). Replaced Codecov (requires CODECOV_TOKEN secret) with `jaywcjlove/coverage-badges-action` which reads the vitest `coverage-summary.json`, generates an SVG badge, and commits it to `.badges/coverage.svg` with `[skip ci]` to avoid looping. Badge is only committed on pushes to main, not PRs.
+**Files changed:**
+- `README.md` — fixed test badge URL, switched coverage badge to local SVG
+- `.github/workflows/test.yml` — added `permissions: contents: write`, replaced Codecov step with badge generation + commit steps
+
+**Decisions:** Self-hosted badge avoids any external service dependency (Codecov, shields.io endpoint). The SVG file is committed directly to the repo so it's always served from GitHub's CDN.
+**Deferred:** Nothing.
