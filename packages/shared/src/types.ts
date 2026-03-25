@@ -86,6 +86,25 @@ export interface Incident {
 /** Public /status page — derived from `uptime_daily` only (no raw runs). */
 export type PublicStatusOutcome = 'up' | 'down' | 'unknown'
 
+/** Granular status history — time period for bucket queries. */
+export type StatusPeriod = '1h' | '24h' | '7d' | '30d'
+
+export interface StatusBucket {
+  bucket_start: string // ISO timestamp
+  bucket_end: string   // ISO timestamp
+  success_count: number
+  failure_count: number
+  avg_latency_ms: number | null
+}
+
+export interface StatusBucketTest {
+  id: string
+  name: string
+  enabled: boolean
+  tags: string[]
+  buckets: StatusBucket[]
+}
+
 export interface PublicStatusDay {
   date: string
   outcome: PublicStatusOutcome
