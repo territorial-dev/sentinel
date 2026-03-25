@@ -1,3 +1,10 @@
+## [1.0.3](https://github.com/territorial-dev/sentinel/compare/v1.0.2...v1.0.3) (2026-03-25)
+
+
+### Bug Fixes
+
+* **ci:** fix standalone path and shared TypeScript runtime errors in Docker ([ecedea4](https://github.com/territorial-dev/sentinel/commit/ecedea497e393b2b0f363d5c45953ff7bba44e91))
+
 ## [1.0.2](https://github.com/territorial-dev/sentinel/compare/v1.0.1...v1.0.2) (2026-03-25)
 
 
