@@ -2,7 +2,7 @@ import type { FastifyInstance } from 'fastify'
 import type { PublicStatusDay, PublicStatusTest } from '@sentinel/shared'
 import { pool } from '../db/pool.js'
 
-type TestRow = { id: string; name: string; enabled: boolean }
+type TestRow = { id: string; name: string; enabled: boolean; tags: string[] }
 
 type UdRow = {
   test_id: string
@@ -74,6 +74,7 @@ function buildPublicStatus(tests: TestRow[], udRows: UdRow[]): PublicStatusTest[
       id: t.id,
       name: t.name,
       enabled: t.enabled,
+      tags: t.tags,
       current_status,
       uptime_pct_30d,
       days,
@@ -84,13 +85,32 @@ function buildPublicStatus(tests: TestRow[], udRows: UdRow[]): PublicStatusTest[
 export async function statusRoutes(app: FastifyInstance): Promise<void> {
   app.get('/', async (_req, reply) => {
     const { rows: tests } = await pool.query<TestRow>(
-      `SELECT id, name, enabled FROM tests ORDER BY created_at DESC`,
+      `SELECT id, name, enabled, tags FROM tests ORDER BY created_at DESC`,
     )
     const { rows: udRows } = await pool.query<UdRow>(
       `SELECT test_id, date::text AS date, success_count, failure_count
        FROM uptime_daily
        WHERE date >= (CURRENT_DATE - 29)
          AND date <= CURRENT_DATE`,
+    )
+    return reply.send(buildPublicStatus(tests, udRows))
+  })
+
+  app.get<{ Params: { tag: string } }>('/tag/:tag', async (req, reply) => {
+    const { tag } = req.params
+    const { rows: tests } = await pool.query<TestRow>(
+      `SELECT id, name, enabled, tags FROM tests WHERE $1 = ANY(tags) ORDER BY created_at DESC`,
+      [tag],
+    )
+    if (tests.length === 0) return reply.status(404).send({ error: 'no tests found for this tag' })
+    const testIds = tests.map(t => t.id)
+    const { rows: udRows } = await pool.query<UdRow>(
+      `SELECT test_id, date::text AS date, success_count, failure_count
+       FROM uptime_daily
+       WHERE test_id = ANY($1)
+         AND date >= (CURRENT_DATE - 29)
+         AND date <= CURRENT_DATE`,
+      [testIds],
     )
     return reply.send(buildPublicStatus(tests, udRows))
   })

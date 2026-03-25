@@ -16,20 +16,24 @@ export async function testsRoutes(app: FastifyInstance): Promise<void> {
     const d = parsed.data
     const id = nanoid()
     const { rows } = await pool.query<Test>(
-      `INSERT INTO tests (id, name, code, schedule_ms, timeout_ms, retries, uses_browser, enabled)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+      `INSERT INTO tests (id, name, code, schedule_ms, timeout_ms, retries, uses_browser, enabled, tags)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
        RETURNING *`,
-      [id, d.name, d.code, d.schedule_ms, d.timeout_ms, d.retries, d.uses_browser, d.enabled]
+      [id, d.name, d.code, d.schedule_ms, d.timeout_ms, d.retries, d.uses_browser, d.enabled, d.tags]
     )
     testEvents.emit('test:created', rows[0])
     return reply.status(201).send(rows[0])
   })
 
   // GET /tests
-  app.get('/', async (_req, reply) => {
-    const { rows } = await pool.query<Test>(
-      'SELECT * FROM tests ORDER BY created_at DESC'
-    )
+  app.get<{ Querystring: { tag?: string } }>('/', async (req, reply) => {
+    const { tag } = req.query
+    const { rows } = tag
+      ? await pool.query<Test>(
+          'SELECT * FROM tests WHERE $1 = ANY(tags) ORDER BY created_at DESC',
+          [tag]
+        )
+      : await pool.query<Test>('SELECT * FROM tests ORDER BY created_at DESC')
     return reply.send(rows)
   })
 
