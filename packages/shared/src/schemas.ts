@@ -16,12 +16,15 @@ export const CreateTestSchema = z.object({
 export const UpdateTestSchema = CreateTestSchema.partial()
 
 export const CreateNotificationChannelSchema = z.object({
-  test_id: z.string(),
+  name: z.string().min(1).max(100),
   type: z.enum(['discord', 'slack', 'webhook']),
   webhook_url: z.string().url(),
   enabled: z.boolean().default(true),
 })
 
+export const UpdateNotificationChannelSchema = CreateNotificationChannelSchema.partial()
+
 export type CreateTestInput = z.infer<typeof CreateTestSchema>
 export type UpdateTestInput = z.infer<typeof UpdateTestSchema>
 export type CreateNotificationChannelInput = z.infer<typeof CreateNotificationChannelSchema>
+export type UpdateNotificationChannelInput = z.infer<typeof UpdateNotificationChannelSchema>

@@ -45,7 +45,7 @@ export interface UptimeDaily {
 
 export interface NotificationChannel {
   id: string
-  test_id: string
+  name: string
   type: NotificationChannelType
   webhook_url: string
   enabled: boolean

@@ -86,8 +86,8 @@ async function dispatchForTest(
   }>(
     `SELECT nc.type, nc.webhook_url, t.name AS test_name
      FROM notification_channels nc
-     JOIN tests t ON t.id = nc.test_id
-     WHERE nc.test_id = $1 AND nc.enabled = TRUE`,
+     CROSS JOIN tests t
+     WHERE t.id = $1 AND nc.enabled = TRUE`,
     [testId],
   )
 

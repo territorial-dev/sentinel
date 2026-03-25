@@ -5,6 +5,7 @@ import { metricsRoutes } from './routes/metrics.js'
 import { dashboardRoutes } from './routes/dashboard.js'
 import { statusRoutes } from './routes/status.js'
 import { authRoutes } from './routes/auth.js'
+import { channelsRoutes } from './routes/channels.js'
 import { verifyJwt } from './auth/jwt.js'
 
 const PUBLIC_ROUTES: Array<{ method: string; prefix: string }> = [
@@ -51,5 +52,6 @@ export async function buildServer() {
   await app.register(metricsRoutes)
   await app.register(dashboardRoutes, { prefix: '/dashboard' })
   await app.register(statusRoutes, { prefix: '/status' })
+  await app.register(channelsRoutes, { prefix: '/channels' })
   return app
 }
