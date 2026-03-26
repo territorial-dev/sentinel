@@ -1,3 +1,15 @@
+# [1.4.0](https://github.com/territorial-dev/sentinel/compare/v1.3.1...v1.4.0) (2026-03-26)
+
+
+### Bug Fixes
+
+* **web:** redirect to /login on 401 across all authenticated calls ([6893896](https://github.com/territorial-dev/sentinel/commit/6893896c84547e2a24a1951e4045919df98625b7))
+
+
+### Features
+
+* **web:** sortable dashboard columns and avg response time ([67dcb57](https://github.com/territorial-dev/sentinel/commit/67dcb57c76f40b8fb3c2784d7ee0dae34637bdfc))
+
 ## [1.3.1](https://github.com/territorial-dev/sentinel/compare/v1.3.0...v1.3.1) (2026-03-26)
 
 
