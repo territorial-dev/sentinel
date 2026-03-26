@@ -1,3 +1,10 @@
+## [1.5.1](https://github.com/territorial-dev/sentinel/compare/v1.5.0...v1.5.1) (2026-03-26)
+
+
+### Bug Fixes
+
+* **api:** resolve build failure in normalization test ([a290c1a](https://github.com/territorial-dev/sentinel/commit/a290c1a4a38c3166de3779c6080ed751c731adbd))
+
 # [1.5.0](https://github.com/territorial-dev/sentinel/compare/v1.4.0...v1.5.0) (2026-03-26)
 
 
