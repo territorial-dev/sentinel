@@ -13,7 +13,7 @@ import {
   AlertDialogTrigger,
 } from './ui/alert-dialog'
 
-import { authHeaders } from '../../../lib/auth-client'
+import { fetchWithAuth } from '../../../lib/auth-client'
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001'
 
@@ -27,7 +27,7 @@ export function DeleteTestButton({ testId, testName }: { testId: string; testNam
     setDeleting(true)
     setError(null)
     try {
-      const res = await fetch(`${API_URL}/tests/${testId}`, { method: 'DELETE', headers: authHeaders() })
+      const res = await fetchWithAuth(`${API_URL}/tests/${testId}`, { method: 'DELETE' })
       if (!res.ok) {
         setError('Could not delete test.')
         setDeleting(false)

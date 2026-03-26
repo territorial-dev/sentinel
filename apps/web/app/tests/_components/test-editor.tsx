@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useState, useEffect } from 'react'
 import type { Test, NotificationChannel } from '@sentinel/shared'
-import { authHeaders } from '../../../lib/auth-client'
+import { fetchWithAuth } from '../../../lib/auth-client'
 
 const MonacoEditor = dynamic(() => import('@monaco-editor/react'), { ssr: false })
 
@@ -51,12 +51,12 @@ export default function TestEditor({ test }: Props) {
   const [channelPickerValue, setChannelPickerValue] = useState('')
 
   useEffect(() => {
-    fetch(`${API_URL}/channels`, { headers: authHeaders() })
+    fetchWithAuth(`${API_URL}/channels`)
       .then(r => r.ok ? r.json() as Promise<NotificationChannel[]> : [])
       .then(setAvailableChannels)
       .catch(() => {})
     if (test) {
-      fetch(`${API_URL}/tests/${test.id}/channels`, { headers: authHeaders() })
+      fetchWithAuth(`${API_URL}/tests/${test.id}/channels`)
         .then(r => r.ok ? r.json() as Promise<NotificationChannel[]> : [])
         .then(chs => setAssignedChannelIds(chs.map(c => c.id)))
         .catch(() => {})
@@ -99,9 +99,9 @@ export default function TestEditor({ test }: Props) {
     try {
       const url = isNew ? `${API_URL}/tests` : `${API_URL}/tests/${test.id}`
       const method = isNew ? 'POST' : 'PATCH'
-      const res = await fetch(url, {
+      const res = await fetchWithAuth(url, {
         method,
-        headers: { 'Content-Type': 'application/json', ...authHeaders() },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
       })
       if (!res.ok) {
@@ -114,23 +114,22 @@ export default function TestEditor({ test }: Props) {
 
       // Sync channel assignments
       if (isNew || test) {
-        const existingRes = await fetch(`${API_URL}/tests/${testId}/channels`, { headers: authHeaders() })
+        const existingRes = await fetchWithAuth(`${API_URL}/tests/${testId}/channels`)
         const existing: NotificationChannel[] = existingRes.ok ? await existingRes.json() as NotificationChannel[] : []
         const existingIds = new Set(existing.map(c => c.id))
         const desiredIds = new Set(assignedChannelIds)
 
         await Promise.all([
           ...[...desiredIds].filter(id => !existingIds.has(id)).map(id =>
-            fetch(`${API_URL}/tests/${testId}/channels`, {
+            fetchWithAuth(`${API_URL}/tests/${testId}/channels`, {
               method: 'POST',
-              headers: { 'Content-Type': 'application/json', ...authHeaders() },
+              headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ channel_id: id }),
             })
           ),
           ...[...existingIds].filter(id => !desiredIds.has(id)).map(id =>
-            fetch(`${API_URL}/tests/${testId}/channels/${id}`, {
+            fetchWithAuth(`${API_URL}/tests/${testId}/channels/${id}`, {
               method: 'DELETE',
-              headers: authHeaders(),
             })
           ),
         ])
@@ -153,7 +152,7 @@ export default function TestEditor({ test }: Props) {
     setRunning(true)
     setRunResult(null)
     try {
-      const res = await fetch(`${API_URL}/tests/${test.id}/run`, { method: 'POST', headers: authHeaders() })
+      const res = await fetchWithAuth(`${API_URL}/tests/${test.id}/run`, { method: 'POST' })
       if (!res.ok) {
         const data = await res.json().catch(() => ({}))
         setRunResult({ status: 'fail', duration_ms: 0, error_message: (data as { error?: string }).error ?? 'Run failed.' })

@@ -3,7 +3,7 @@
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 import type { NotificationChannel, NotificationChannelType } from '@sentinel/shared'
-import { authHeaders } from '../../../lib/auth-client'
+import { fetchWithAuth } from '../../../lib/auth-client'
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001'
 
@@ -130,9 +130,9 @@ function ChannelRow({ channel, onUpdated }: ChannelRowProps) {
     setBusy(true)
     setError(null)
     try {
-      const res = await fetch(`${API_URL}/channels/${channel.id}`, {
+      const res = await fetchWithAuth(`${API_URL}/channels/${channel.id}`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json', ...authHeaders() },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data),
       })
       if (!res.ok) {
@@ -152,9 +152,8 @@ function ChannelRow({ channel, onUpdated }: ChannelRowProps) {
     setBusy(true)
     setError(null)
     try {
-      const res = await fetch(`${API_URL}/channels/${channel.id}`, {
+      const res = await fetchWithAuth(`${API_URL}/channels/${channel.id}`, {
         method: 'DELETE',
-        headers: authHeaders(),
       })
       if (!res.ok) {
         setError('Delete failed.')
@@ -247,9 +246,9 @@ export function ChannelManager({ channels }: { channels: NotificationChannel[] }
     setCreateBusy(true)
     setCreateError(null)
     try {
-      const res = await fetch(`${API_URL}/channels`, {
+      const res = await fetchWithAuth(`${API_URL}/channels`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', ...authHeaders() },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data),
       })
       if (!res.ok) {

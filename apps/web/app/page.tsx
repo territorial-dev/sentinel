@@ -1,16 +1,18 @@
 import Link from 'next/link'
 import { cookies } from 'next/headers'
+import { redirect } from 'next/navigation'
 import type { TestSummary } from '@sentinel/shared'
 import { serverAuthHeaders } from '../lib/auth-server'
 import { DashboardTable } from './_components/dashboard-table'
 
 export const dynamic = 'force-dynamic'
 
-async function getTests(tag?: string): Promise<TestSummary[]> {
+async function getTests(tag?: string): Promise<TestSummary[] | null> {
   const apiUrl = process.env.API_URL ?? 'http://localhost:3001'
   try {
     const url = tag ? `${apiUrl}/dashboard?tag=${encodeURIComponent(tag)}` : `${apiUrl}/dashboard`
     const res = await fetch(url, { cache: 'no-store', headers: serverAuthHeaders(await cookies()) })
+    if (res.status === 401) return null
     if (!res.ok) return []
     return res.json() as Promise<TestSummary[]>
   } catch {
@@ -25,6 +27,7 @@ export default async function DashboardPage({
 }) {
   const { tag } = await searchParams
   const tests = await getTests(tag)
+  if (tests === null) redirect('/login')
   const allTags = Array.from(new Set(tests.flatMap(t => t.tags ?? []))).sort()
 
   return (

@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import type { NotificationChannel } from '@sentinel/shared'
-import { authHeaders } from '../../../lib/auth-client'
+import { fetchWithAuth } from '../../../lib/auth-client'
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001'
 
@@ -21,9 +21,9 @@ function TagRow({ tag, allChannels, initialAssigned }: TagRowProps) {
     if (!channelId) return
     setBusy(true)
     try {
-      const res = await fetch(`${API_URL}/tags/${encodeURIComponent(tag)}/channels`, {
+      const res = await fetchWithAuth(`${API_URL}/tags/${encodeURIComponent(tag)}/channels`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', ...authHeaders() },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ channel_id: channelId }),
       })
       if (res.ok) {
@@ -41,9 +41,8 @@ function TagRow({ tag, allChannels, initialAssigned }: TagRowProps) {
   async function handleRemove(channelId: string) {
     setBusy(true)
     try {
-      await fetch(`${API_URL}/tags/${encodeURIComponent(tag)}/channels/${channelId}`, {
+      await fetchWithAuth(`${API_URL}/tags/${encodeURIComponent(tag)}/channels/${channelId}`, {
         method: 'DELETE',
-        headers: authHeaders(),
       })
       setAssigned(prev => prev.filter(c => c.id !== channelId))
     } catch {
