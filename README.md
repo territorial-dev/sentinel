@@ -150,7 +150,8 @@ Tests are JavaScript functions that receive a `ctx` object. Return a truthy valu
 const res = await ctx.http.get('https://example.com/api/health')
 // res.status   → number (e.g. 200)
 // res.headers  → object
-// res.body     → parsed JSON if Content-Type is application/json, else string
+// res.body     → string (raw response body)
+// res.json()   → parse body as JSON (throws if not valid JSON)
 
 const res = await ctx.http.post('https://example.com/api/users', {
   body: JSON.stringify({ name: 'Alice' }),
@@ -158,7 +159,7 @@ const res = await ctx.http.post('https://example.com/api/users', {
 })
 ```
 
-Supported methods: `get`, `post`, `put`, `delete`. All return `{ status, headers, body }`.
+Supported methods: `get`, `post`, `put`, `delete`. All return `{ status, headers, body, json() }`.
 
 #### `ctx.assert(name, value, message?)` — Named assertions
 
@@ -166,7 +167,7 @@ Record individual assertion results attached to the test run:
 
 ```js
 ctx.assert('status is 200', res.status === 200)
-ctx.assert('body has id', res.body.id !== undefined, 'Expected id in response')
+ctx.assert('body has id', res.json().id !== undefined, 'Expected id in response')
 ```
 
 Assertions are stored in the database and shown on the test detail page. A failed assertion does not automatically fail the test — return a falsy value or throw to fail the run.
@@ -200,8 +201,9 @@ return res.status === 200
 ```js
 const res = await ctx.http.get('https://api.example.com/health')
 ctx.assert('status ok', res.status === 200)
-ctx.assert('service is up', res.body.status === 'ok')
-return res.status === 200 && res.body.status === 'ok'
+const body = res.json()
+ctx.assert('service is up', body.status === 'ok')
+return res.status === 200 && body.status === 'ok'
 ```
 
 **Multi-step test:**
@@ -215,9 +217,10 @@ const create = await ctx.http.post('https://api.example.com/users', {
 ctx.assert('user created', create.status === 201)
 
 // Fetch it back
-const fetch = await ctx.http.get(`https://api.example.com/users/${create.body.id}`)
+const created = create.json()
+const fetch = await ctx.http.get(`https://api.example.com/users/${created.id}`)
 ctx.assert('user exists', fetch.status === 200)
-ctx.assert('name matches', fetch.body.name === 'Test User')
+ctx.assert('name matches', fetch.json().name === 'Test User')
 
 return create.status === 201 && fetch.status === 200
 ```

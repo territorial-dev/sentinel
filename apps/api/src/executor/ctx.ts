@@ -6,6 +6,7 @@ export interface HttpResponse {
   status: number
   body: string
   headers: Record<string, string>
+  json(): unknown
 }
 
 export interface HttpOptions {
@@ -42,7 +43,7 @@ async function doFetch(url: string, init: RequestInit): Promise<HttpResponse> {
   res.headers.forEach((value, key) => {
     headers[key] = value
   })
-  return { status: res.status, body, headers }
+  return { status: res.status, body, headers, json: () => JSON.parse(body) }
 }
 
 export function buildCtx(options?: BuildCtxOptions): CtxBundle {
