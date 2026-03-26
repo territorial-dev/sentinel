@@ -1,3 +1,10 @@
+## [1.3.1](https://github.com/territorial-dev/sentinel/compare/v1.3.0...v1.3.1) (2026-03-26)
+
+
+### Bug Fixes
+
+* **web:** replace new URL() with URLSearchParams to fix production crash ([b27c333](https://github.com/territorial-dev/sentinel/commit/b27c333f33b59a99e5e7cad074492e62f6d1f6f8)), closes [#418](https://github.com/territorial-dev/sentinel/issues/418)
+
 # [1.3.0](https://github.com/territorial-dev/sentinel/compare/v1.2.2...v1.3.0) (2026-03-26)
 
 
