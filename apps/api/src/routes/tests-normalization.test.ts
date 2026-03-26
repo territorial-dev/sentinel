@@ -54,7 +54,8 @@ describe('tests routes tag normalization', () => {
 
     expect(res.statusCode).toBe(201)
     const insertCall = mockQuery.mock.calls[0]
-    const params = insertCall?.[1] as unknown[]
+    expect(insertCall).toBeDefined()
+    const params = insertCall![1] as unknown[]
     expect(params[8]).toEqual(['prod', 'on call'])
   })
 
@@ -89,7 +90,8 @@ describe('tests routes tag normalization', () => {
 
     expect(res.statusCode).toBe(200)
     const updateCall = mockQuery.mock.calls[0]
-    const params = updateCall?.[1] as unknown[]
+    expect(updateCall).toBeDefined()
+    const params = updateCall![1] as unknown[]
     expect(params[0]).toEqual(['prod', 'on call'])
   })
 })
