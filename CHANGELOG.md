@@ -1,3 +1,16 @@
+# [1.3.0](https://github.com/territorial-dev/sentinel/compare/v1.2.2...v1.3.0) (2026-03-26)
+
+
+### Bug Fixes
+
+* **ci:** replace missing coverage-badges-action with inline node script ([8c3d3b5](https://github.com/territorial-dev/sentinel/commit/8c3d3b54f9da4ab6d40db09f2403afe222c7a5ac))
+* **executor:** add json() method to HttpResponse ([8c7e790](https://github.com/territorial-dev/sentinel/commit/8c7e790bf48e4b4eb855df25f704278170514220))
+
+
+### Features
+
+* **web:** granular status history with period selector (F-23) ([11626d4](https://github.com/territorial-dev/sentinel/commit/11626d472e06fc59b02d902c8aa0e5a091ce1667))
+
 ## [1.2.2](https://github.com/territorial-dev/sentinel/compare/v1.2.1...v1.2.2) (2026-03-25)
 
 
