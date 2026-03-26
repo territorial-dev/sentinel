@@ -1,3 +1,15 @@
+# [1.5.0](https://github.com/territorial-dev/sentinel/compare/v1.4.0...v1.5.0) (2026-03-26)
+
+
+### Bug Fixes
+
+* **api:** persist notification events and notify ongoing fail streaks ([1fbdfa8](https://github.com/territorial-dev/sentinel/commit/1fbdfa8ce7bd664f9da0f3fcf966975de9c4a356))
+
+
+### Features
+
+* set default alert cooldown to 24h ([50140d8](https://github.com/territorial-dev/sentinel/commit/50140d8a779d2decaa20261cd342f17b121b2b2c))
+
 # [1.4.0](https://github.com/territorial-dev/sentinel/compare/v1.3.1...v1.4.0) (2026-03-26)
 
 
