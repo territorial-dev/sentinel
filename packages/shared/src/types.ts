@@ -73,6 +73,7 @@ export interface TestSummary {
   last_status: TestStatus | null
   last_run_at: string | null
   pass_rate_7d: number | null
+  avg_latency_ms: number | null
 }
 
 export interface Incident {

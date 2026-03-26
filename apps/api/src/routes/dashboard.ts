@@ -18,7 +18,8 @@ export async function dashboardRoutes(app: FastifyInstance): Promise<void> {
             ROUND(
               100.0 * SUM(ud.success_count)::numeric /
               NULLIF(SUM(ud.success_count) + SUM(ud.failure_count), 0)
-            )::integer AS pass_rate_7d
+            )::integer AS pass_rate_7d,
+            ROUND(AVG(ud.avg_latency_ms))::integer AS avg_latency_ms
           FROM tests t
           LEFT JOIN test_state ts ON ts.test_id = t.id
           LEFT JOIN uptime_daily ud
@@ -39,7 +40,8 @@ export async function dashboardRoutes(app: FastifyInstance): Promise<void> {
             ROUND(
               100.0 * SUM(ud.success_count)::numeric /
               NULLIF(SUM(ud.success_count) + SUM(ud.failure_count), 0)
-            )::integer AS pass_rate_7d
+            )::integer AS pass_rate_7d,
+            ROUND(AVG(ud.avg_latency_ms))::integer AS avg_latency_ms
           FROM tests t
           LEFT JOIN test_state ts ON ts.test_id = t.id
           LEFT JOIN uptime_daily ud

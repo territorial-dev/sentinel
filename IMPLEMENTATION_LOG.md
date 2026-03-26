@@ -540,3 +540,13 @@ AI agents must append an entry here after completing any feature from PROJECT.md
 
 **Decisions:** `new URL(str)` requires an absolute URL; in production `NEXT_PUBLIC_API_URL` is a relative path, causing an immediate throw. Switched to plain string concatenation with `URLSearchParams` which works for both relative and absolute bases. `suppressHydrationWarning` on `<time>` is the correct targeted fix for a timestamp whose relative representation legitimately differs between SSR and client hydration.
 **Deferred:** Nothing.
+
+## 2026-03-26 · Dashboard sortable columns + avg response time
+
+**What was built:** Added sortable column headers (Name, Status, Last Run, Avg Response) to the dashboard test table. Added a new "Avg Response" column showing the 7-day average latency in ms sourced from `uptime_daily`.
+**Files changed:**
+- `packages/shared/src/types.ts` — added `avg_latency_ms: number | null` to `TestSummary`
+- `apps/api/src/routes/dashboard.ts` — added `ROUND(AVG(ud.avg_latency_ms))::integer AS avg_latency_ms` to both SQL query branches
+- `apps/web/app/_components/dashboard-table.tsx` — added `SortKey` type, `sortTests` function, `SortIcon` component, sort state, and sortable `<th>` buttons; added Avg Response cell
+**Decisions:** Sorting is client-side since tests arrive as server-rendered props — avoids extra API roundtrip. Nulls always sort to the bottom regardless of direction. Clicking the active column reverses direction; clicking a new column resets to ascending.
+**Deferred:** Nothing.
