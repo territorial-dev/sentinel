@@ -1,6 +1,10 @@
 import { request } from 'undici'
 import type { TestStatus } from '@sentinel/shared'
 import { pool } from '../db/pool.js'
+import {
+  insertNotificationEvent,
+  type NotificationEventReason,
+} from '../db/queries/notification-events.js'
 
 export interface NotificationCandidate {
   test_id: string
@@ -17,14 +21,17 @@ export function triggerNotifications(candidates: NotificationCandidate[]): void 
 }
 
 async function runNotifications(candidates: NotificationCandidate[]): Promise<void> {
-  const transitioned = candidates.filter(c => {
+  const actionable = candidates.filter(c => {
     const prevFailing = c.prev_status !== null && c.prev_status !== 'success'
     const nowFailing = c.new_status !== 'success'
-    return (c.prev_status === 'success' && nowFailing) || (prevFailing && c.new_status === 'success')
+    // Always evaluate failing tests so missed threshold crossings can still notify.
+    if (nowFailing) return true
+    // Recovery only matters on actual fail -> success transition.
+    return prevFailing && c.new_status === 'success'
   })
-  if (transitioned.length === 0) return
+  if (actionable.length === 0) return
 
-  const testIds = transitioned.map(c => c.test_id)
+  const testIds = actionable.map(c => c.test_id)
   const stateResult = await pool.query<{
     test_id: string
     consecutive_failures: number
@@ -41,25 +48,43 @@ async function runNotifications(candidates: NotificationCandidate[]): Promise<vo
   )
   const stateMap = new Map(stateResult.rows.map(r => [r.test_id, r]))
 
-  for (const candidate of transitioned) {
+  for (const candidate of actionable) {
     const state = stateMap.get(candidate.test_id)
     const consecutive = state?.consecutive_failures ?? 0
     const lastNotifiedAt = state?.last_notification_at ?? null
     const threshold = state?.failure_threshold ?? 3
     const cooldown = state?.cooldown_ms ?? 300_000
 
+    await logNotificationEventSafe({
+      test_id: candidate.test_id,
+      event: candidate.new_status !== 'success' ? 'fail' : 'recovery',
+      phase: 'evaluated',
+      consecutive_failures: consecutive,
+      failure_threshold: threshold,
+      cooldown_ms: cooldown,
+    })
+
     if (candidate.new_status !== 'success') {
       // fail transition: check per-test threshold and cooldown
-      if (consecutive < threshold) continue
+      if (consecutive < threshold) {
+        await logSkippedEvent(candidate.test_id, 'fail', consecutive, threshold, cooldown, 'below_threshold')
+        continue
+      }
       if (lastNotifiedAt !== null) {
         const elapsed = Date.now() - lastNotifiedAt.getTime()
-        if (elapsed < cooldown) continue
+        if (elapsed < cooldown) {
+          await logSkippedEvent(candidate.test_id, 'fail', consecutive, threshold, cooldown, 'cooldown_active')
+          continue
+        }
       }
-      await dispatchForTest(candidate.test_id, 'fail', consecutive, candidate.error_message, candidate.duration_ms, null)
+      await dispatchForTest(candidate.test_id, 'fail', consecutive, threshold, cooldown, candidate.error_message, candidate.duration_ms, null)
     } else {
       // recovery transition: only notify if we previously sent a fail alert
-      if (lastNotifiedAt === null) continue
-      await dispatchForTest(candidate.test_id, 'recovery', consecutive, null, candidate.duration_ms, lastNotifiedAt)
+      if (lastNotifiedAt === null) {
+        await logSkippedEvent(candidate.test_id, 'recovery', consecutive, threshold, cooldown, 'no_prior_notification')
+        continue
+      }
+      await dispatchForTest(candidate.test_id, 'recovery', consecutive, threshold, cooldown, null, candidate.duration_ms, lastNotifiedAt)
     }
   }
 }
@@ -68,6 +93,8 @@ async function dispatchForTest(
   testId: string,
   event: 'fail' | 'recovery',
   consecutiveFailures: number,
+  failureThreshold: number,
+  cooldownMs: number,
   errorMessage: string | null,
   durationMs: number,
   lastNotifiedAt: Date | null,
@@ -80,25 +107,49 @@ async function dispatchForTest(
   )
 
   const channelResult = await pool.query<{
+    id: string
     type: 'discord' | 'slack' | 'webhook'
     webhook_url: string
     test_name: string
   }>(
-    `SELECT DISTINCT nc.type, nc.webhook_url, t.name AS test_name
+    `SELECT DISTINCT nc.id, nc.type, nc.webhook_url, t.name AS test_name
      FROM notification_channels nc
      JOIN tests t ON t.id = $1
      WHERE nc.enabled = TRUE
        AND nc.id IN (
          SELECT ca.channel_id FROM channel_assignments ca
          WHERE (ca.scope_type = 'test' AND ca.scope_value = $1)
-            OR (ca.scope_type = 'tag'  AND ca.scope_value = ANY(t.tags))
+            OR (
+              ca.scope_type = 'tag'
+              AND LOWER(BTRIM(ca.scope_value)) = ANY(
+                ARRAY(
+                  SELECT LOWER(BTRIM(tag_value))
+                  FROM unnest(t.tags) AS tag_value
+                )
+              )
+            )
        )`,
     [testId],
   )
 
   const downtimeMs = lastNotifiedAt !== null ? Date.now() - lastNotifiedAt.getTime() : null
 
+  if (channelResult.rows.length === 0) {
+    await logSkippedEvent(testId, event, consecutiveFailures, failureThreshold, cooldownMs, 'no_channels')
+    return
+  }
+
   for (const channel of channelResult.rows) {
+    await logNotificationEventSafe({
+      test_id: testId,
+      channel_id: channel.id,
+      event,
+      phase: 'attempted',
+      consecutive_failures: consecutiveFailures,
+      failure_threshold: failureThreshold,
+      cooldown_ms: cooldownMs,
+    })
+
     try {
       const body = buildPayload(
         channel.type,
@@ -110,14 +161,82 @@ async function dispatchForTest(
         durationMs,
         downtimeMs,
       )
-      await request(channel.webhook_url, {
+      const response = await request(channel.webhook_url, {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify(body),
       })
+
+      if (response.statusCode < 200 || response.statusCode >= 300) {
+        await logNotificationEventSafe({
+          test_id: testId,
+          channel_id: channel.id,
+          event,
+          phase: 'failed',
+          reason: 'http_non_2xx',
+          consecutive_failures: consecutiveFailures,
+          failure_threshold: failureThreshold,
+          cooldown_ms: cooldownMs,
+          http_status: response.statusCode,
+          error_message: `non-2xx status: ${response.statusCode}`,
+        })
+        continue
+      }
+
+      await logNotificationEventSafe({
+        test_id: testId,
+        channel_id: channel.id,
+        event,
+        phase: 'sent',
+        consecutive_failures: consecutiveFailures,
+        failure_threshold: failureThreshold,
+        cooldown_ms: cooldownMs,
+        http_status: response.statusCode,
+      })
     } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err)
+      await logNotificationEventSafe({
+        test_id: testId,
+        channel_id: channel.id,
+        event,
+        phase: 'failed',
+        reason: 'http_error',
+        consecutive_failures: consecutiveFailures,
+        failure_threshold: failureThreshold,
+        cooldown_ms: cooldownMs,
+        error_message: message.slice(0, 2000),
+      })
       console.error(`notifier: failed to dispatch to ${channel.type} for test ${testId}`, err)
     }
+  }
+}
+
+async function logSkippedEvent(
+  testId: string,
+  event: 'fail' | 'recovery',
+  consecutiveFailures: number,
+  threshold: number,
+  cooldownMs: number,
+  reason: NotificationEventReason,
+): Promise<void> {
+  await logNotificationEventSafe({
+    test_id: testId,
+    event,
+    phase: 'skipped',
+    reason,
+    consecutive_failures: consecutiveFailures,
+    failure_threshold: threshold,
+    cooldown_ms: cooldownMs,
+  })
+}
+
+async function logNotificationEventSafe(
+  input: Parameters<typeof insertNotificationEvent>[0],
+): Promise<void> {
+  try {
+    await insertNotificationEvent(input)
+  } catch (err: unknown) {
+    console.error('notifier: failed to write notification event', err)
   }
 }
 

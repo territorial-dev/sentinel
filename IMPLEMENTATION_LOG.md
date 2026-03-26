@@ -550,3 +550,37 @@ AI agents must append an entry here after completing any feature from PROJECT.md
 - `apps/web/app/_components/dashboard-table.tsx` — added `SortKey` type, `sortTests` function, `SortIcon` component, sort state, and sortable `<th>` buttons; added Avg Response cell
 **Decisions:** Sorting is client-side since tests arrive as server-rendered props — avoids extra API roundtrip. Nulls always sort to the bottom regardless of direction. Clicking the active column reverses direction; clicking a new column resets to ascending.
 **Deferred:** Nothing.
+
+## 2026-03-26 · F-07/F-22 · Persist Notification Delivery Events
+
+**What was built:** Added append-only `notification_events` persistence so notifier decisions and delivery outcomes are auditable in Postgres. The notifier now records `evaluated`, `skipped`, `attempted`, `sent`, and `failed` phases with reasons (e.g. threshold/cooldown/no_channels/http errors), channel linkage, and HTTP status when present.
+**Files changed:**
+- `apps/api/src/db/migrations/006_notification_events.sql` (new) — creates `notification_events` table and debug indexes
+- `apps/api/src/db/queries/notification-events.ts` (new) — typed helper to insert event rows
+- `apps/api/src/notifier/dispatch.ts` — instrumented gating and send flow; logs phase/reason rows; captures non-2xx as failure events
+- `apps/api/src/notifier/dispatch.test.ts` — added coverage for skipped/attempted/sent/failed event logging scenarios
+**Decisions:** Event writes are best-effort and non-blocking (`logNotificationEventSafe`) to preserve existing fire-and-forget notifier resilience. No new API/UI surface was added in this pass; DB telemetry is internal-only for operational debugging.
+**Deferred:** Public/privileged API endpoints for querying notification events were intentionally deferred.
+
+## 2026-03-26 · F-22 · Tag Notification Dispatch Normalization Fix
+
+**What was built:** Fixed tag-based channel routing so notification dispatch is resilient to case and whitespace differences. Tags are now normalized at test write boundaries and tag-assignment route boundaries, and dispatch query matching now normalizes both assignment and test tag values to avoid silent misses from legacy mixed formatting.
+**Files changed:**
+- `apps/api/src/tags/normalize.ts` (new) — shared tag normalization and dedupe helpers
+- `apps/api/src/routes/tests.ts` — normalizes/dedupes tags on create, patch, and import
+- `apps/api/src/routes/tags.ts` — normalizes tag params for GET/POST/DELETE and rejects invalid empty tags
+- `apps/api/src/notifier/dispatch.ts` — normalized SQL matching for tag assignments (`LOWER(BTRIM(...))`)
+- `apps/api/src/routes/tags.test.ts` (new) — covers invalid tag rejection and normalized assignment persistence
+- `apps/api/src/routes/tests-normalization.test.ts` (new) — covers normalized/deduped test tags on create/patch
+- `apps/api/src/notifier/dispatch.test.ts` (new) — covers normalized dispatch SQL and fail/recovery send path
+**Decisions:** Normalization is performed at both write time and match time. Write-time normalization prevents new drift; match-time normalization ensures backward compatibility with existing rows that may already contain inconsistent casing/spacing.
+**Deferred:** Existing persisted tag values are not backfilled in DB via migration yet; runtime matching now handles mixed historical data.
+
+## 2026-03-26 · F-07 · Notify Eligible Unnotified Failures
+
+**What was built:** Updated notifier evaluation so failing tests are checked on every failing candidate, not only `success -> fail` transitions. This ensures tests that crossed threshold during an ongoing outage are still notified and recorded in `notification_events` as attempted/sent/failed or skipped with reason (e.g. cooldown active).
+**Files changed:**
+- `apps/api/src/notifier/dispatch.ts` — replaced transition-only fail gating with state-aware fail evaluation while keeping recovery transition-based
+- `apps/api/src/notifier/dispatch.test.ts` — added regression test for `fail -> fail` threshold crossing notification
+**Decisions:** Recovery notifications remain transition-based (`fail -> success`) to avoid duplicate recoveries, but fail notifications now evaluate eligibility continuously for non-success states so threshold crossing cannot be missed.
+**Deferred:** No additional API/UI changes; debugging remains via `notification_events` SQL queries.

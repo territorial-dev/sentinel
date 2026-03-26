@@ -6,6 +6,7 @@ import { pool } from '../db/pool.js'
 import { invalidateCache } from '../executor/compile.js'
 import { testEvents } from '../events.js'
 import { getAssignedChannels, addAssignment, removeAssignment } from '../db/queries/assignments.js'
+import { normalizeTags } from '../tags/normalize.js'
 
 export async function testsRoutes(app: FastifyInstance): Promise<void> {
   // POST /tests
@@ -15,12 +16,13 @@ export async function testsRoutes(app: FastifyInstance): Promise<void> {
       return reply.status(400).send({ error: parsed.error.flatten() })
     }
     const d = parsed.data
+    const tags = normalizeTags(d.tags)
     const id = nanoid()
     const { rows } = await pool.query<Test>(
       `INSERT INTO tests (id, name, code, schedule_ms, timeout_ms, retries, uses_browser, enabled, tags)
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
        RETURNING *`,
-      [id, d.name, d.code, d.schedule_ms, d.timeout_ms, d.retries, d.uses_browser, d.enabled, d.tags]
+      [id, d.name, d.code, d.schedule_ms, d.timeout_ms, d.retries, d.uses_browser, d.enabled, tags]
     )
     testEvents.emit('test:created', rows[0])
     return reply.status(201).send(rows[0])
@@ -44,7 +46,7 @@ export async function testsRoutes(app: FastifyInstance): Promise<void> {
     for (let i = 0; i < body.tests.length; i++) {
       const parsed = CreateTestSchema.safeParse(body.tests[i])
       if (!parsed.success) errors[i] = parsed.error.flatten()
-      else valid.push(parsed.data)
+      else valid.push({ ...parsed.data, tags: normalizeTags(parsed.data.tags) })
     }
     if (Object.keys(errors).length > 0) {
       return reply.status(400).send({ error: 'validation failed', errors })
@@ -176,7 +178,10 @@ export async function testsRoutes(app: FastifyInstance): Promise<void> {
     if (!parsed.success) {
       return reply.status(400).send({ error: parsed.error.flatten() })
     }
-    const entries = Object.entries(parsed.data).filter(([, v]) => v !== undefined)
+    const data = parsed.data.tags === undefined
+      ? parsed.data
+      : { ...parsed.data, tags: normalizeTags(parsed.data.tags) }
+    const entries = Object.entries(data).filter(([, v]) => v !== undefined)
     if (entries.length === 0) {
       return reply.status(400).send({ error: 'no fields to update' })
     }
