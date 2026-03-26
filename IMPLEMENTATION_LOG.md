@@ -521,3 +521,12 @@ AI agents must append an entry here after completing any feature from PROJECT.md
 
 **Decisions:** Self-hosted badge avoids any external service dependency (Codecov, shields.io endpoint). The SVG file is committed directly to the repo so it's always served from GitHub's CDN.
 **Deferred:** Nothing.
+
+## 2026-03-26 · Fix · HttpResponse.json() method
+
+**What was built:** Added `json()` method to the `HttpResponse` interface returned by `ctx.http.get/post`. Previously `res.body` was always a plain string, but the README documented it as auto-parsed JSON and test examples used `res.body.property` and `res.json()` patterns that would throw at runtime.
+**Files changed:**
+- `apps/api/src/executor/ctx.ts` — added `json(): unknown` to `HttpResponse` interface; `doFetch` now returns `json: () => JSON.parse(body)`
+- `README.md` — corrected `ctx.http` documentation and all code examples to use `res.json()` for JSON parsing
+**Decisions:** Fixed in the app rather than patching individual tests — all existing tests using `res.json()` now work without changes, and the API is consistent with the native fetch pattern.
+**Deferred:** Tests in the database that use `res.body.property` (without `json()`) are still broken; they are not covered by this fix since they access string properties.
