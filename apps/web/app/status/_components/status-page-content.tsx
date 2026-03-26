@@ -33,11 +33,10 @@ export function StatusPageContent({ tests, tag }: Props) {
 
   useEffect(() => {
     setLoading(true)
-    const url = new URL(`${API_URL}/status/buckets`)
-    url.searchParams.set('period', period)
-    if (tag) url.searchParams.set('tag', tag)
+    const params = new URLSearchParams({ period })
+    if (tag) params.set('tag', tag)
 
-    fetch(url.toString())
+    fetch(`${API_URL}/status/buckets?${params}`)
       .then(r => r.json() as Promise<StatusBucketTest[]>)
       .then(data => {
         const m = new Map<string, StatusBucket[]>()

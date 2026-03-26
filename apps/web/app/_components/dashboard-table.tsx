@@ -58,11 +58,10 @@ export function DashboardTable({ tests, tag }: Props) {
 
   useEffect(() => {
     setLoading(true)
-    const url = new URL(`${API_URL}/status/buckets`)
-    url.searchParams.set('period', period)
-    if (tag) url.searchParams.set('tag', tag)
+    const params = new URLSearchParams({ period })
+    if (tag) params.set('tag', tag)
 
-    fetch(url.toString())
+    fetch(`${API_URL}/status/buckets?${params}`)
       .then(r => r.json() as Promise<StatusBucketTest[]>)
       .then(data => {
         const m = new Map<string, StatusBucket[]>()
@@ -128,7 +127,7 @@ export function DashboardTable({ tests, tag }: Props) {
                   <StatusBadge status={test.last_status} />
                 </td>
                 <td className="py-3 pr-8 text-zinc-400">
-                  <time dateTime={test.last_run_at ?? undefined}>
+                  <time dateTime={test.last_run_at ?? undefined} suppressHydrationWarning>
                     {formatRelativeTime(test.last_run_at)}
                   </time>
                 </td>

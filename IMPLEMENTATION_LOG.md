@@ -530,3 +530,13 @@ AI agents must append an entry here after completing any feature from PROJECT.md
 - `README.md` — corrected `ctx.http` documentation and all code examples to use `res.json()` for JSON parsing
 **Decisions:** Fixed in the app rather than patching individual tests — all existing tests using `res.json()` now work without changes, and the API is consistent with the native fetch pattern.
 **Deferred:** Tests in the database that use `res.body.property` (without `json()`) are still broken; they are not covered by this fix since they access string properties.
+
+## 2026-03-26 · bugfix · Production URL construction crash + hydration mismatch (F-23 regression)
+
+**What was built:** Fixed two production bugs introduced by the F-23 commit.
+**Files changed:**
+- `apps/web/app/_components/dashboard-table.tsx` — replaced `new URL(API_URL + path)` with `URLSearchParams`-based string; added `suppressHydrationWarning` on `<time>` element
+- `apps/web/app/status/_components/status-page-content.tsx` — same URL construction fix
+
+**Decisions:** `new URL(str)` requires an absolute URL; in production `NEXT_PUBLIC_API_URL` is a relative path, causing an immediate throw. Switched to plain string concatenation with `URLSearchParams` which works for both relative and absolute bases. `suppressHydrationWarning` on `<time>` is the correct targeted fix for a timestamp whose relative representation legitimately differs between SSR and client hydration.
+**Deferred:** Nothing.
