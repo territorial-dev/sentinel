@@ -23,6 +23,7 @@ interface FormErrors {
   name?: string
   schedule?: string
   timeout?: string
+  cooldown?: string
   submit?: string
 }
 
@@ -39,6 +40,7 @@ export default function TestEditor({ test }: Props) {
   const [name, setName] = useState(test?.name ?? '')
   const [scheduleS, setScheduleS] = useState(String((test?.schedule_ms ?? 60_000) / 1000))
   const [timeoutS, setTimeoutS] = useState(String((test?.timeout_ms ?? 5_000) / 1000))
+  const [cooldownH, setCooldownH] = useState(String((test?.cooldown_ms ?? 86_400_000) / 3_600_000))
   const [enabled, setEnabled] = useState(test?.enabled ?? true)
   const [tagsInput, setTagsInput] = useState((test?.tags ?? []).join(', '))
   const [code, setCode] = useState(test?.code ?? DEFAULT_CODE)
@@ -72,6 +74,8 @@ export default function TestEditor({ test }: Props) {
     if (!Number.isFinite(sched) || sched < 30) errs.schedule = 'Minimum 30 seconds.'
     const tout = Number(timeoutS)
     if (!Number.isFinite(tout) || tout < 1 || tout > 10) errs.timeout = 'Must be between 1 and 10 seconds.'
+    const cooldown = Number(cooldownH)
+    if (!Number.isFinite(cooldown) || cooldown < 0) errs.cooldown = 'Must be 0 or greater.'
     return errs
   }
 
@@ -92,6 +96,7 @@ export default function TestEditor({ test }: Props) {
       code,
       schedule_ms: Number(scheduleS) * 1000,
       timeout_ms: Number(timeoutS) * 1000,
+      cooldown_ms: Math.round(Number(cooldownH) * 3_600_000),
       enabled,
       tags,
     }
@@ -221,6 +226,20 @@ export default function TestEditor({ test }: Props) {
             className="w-full bg-zinc-900 border border-zinc-800 text-zinc-100 text-sm px-3 py-2 outline-none focus:border-zinc-600"
           />
           {errors.timeout && <p className="text-red-400 text-xs mt-1">{errors.timeout}</p>}
+        </div>
+
+        {/* Cooldown */}
+        <div>
+          <label className="block text-zinc-500 text-xs mb-1.5 tracking-wider uppercase">Alert Cooldown (h)</label>
+          <input
+            type="number"
+            value={cooldownH}
+            onChange={e => setCooldownH(e.target.value)}
+            min={0}
+            step="0.5"
+            className="w-full bg-zinc-900 border border-zinc-800 text-zinc-100 text-sm px-3 py-2 outline-none focus:border-zinc-600"
+          />
+          {errors.cooldown && <p className="text-red-400 text-xs mt-1">{errors.cooldown}</p>}
         </div>
 
         {/* Enabled */}

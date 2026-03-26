@@ -1,0 +1,5 @@
+ALTER TABLE tests
+  ALTER COLUMN cooldown_ms SET DEFAULT 86400000;
+
+UPDATE tests
+SET cooldown_ms = 86400000;

@@ -53,7 +53,7 @@ async function runNotifications(candidates: NotificationCandidate[]): Promise<vo
     const consecutive = state?.consecutive_failures ?? 0
     const lastNotifiedAt = state?.last_notification_at ?? null
     const threshold = state?.failure_threshold ?? 3
-    const cooldown = state?.cooldown_ms ?? 300_000
+    const cooldown = state?.cooldown_ms ?? 86_400_000
 
     await logNotificationEventSafe({
       test_id: candidate.test_id,

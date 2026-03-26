@@ -584,3 +584,14 @@ AI agents must append an entry here after completing any feature from PROJECT.md
 - `apps/api/src/notifier/dispatch.test.ts` — added regression test for `fail -> fail` threshold crossing notification
 **Decisions:** Recovery notifications remain transition-based (`fail -> success`) to avoid duplicate recoveries, but fail notifications now evaluate eligibility continuously for non-success states so threshold crossing cannot be missed.
 **Deferred:** No additional API/UI changes; debugging remains via `notification_events` SQL queries.
+
+## 2026-03-26 · F-07 · Set Default Cooldown to 24 Hours
+
+**What was built:** Changed alert cooldown defaults to 24 hours and exposed cooldown editing in the test editor UI. Added a migration that updates every existing test's `cooldown_ms` to 24 hours and changes the DB default for future rows.
+**Files changed:**
+- `packages/shared/src/schemas.ts` — `CreateTestSchema.cooldown_ms` default changed from 5 minutes to `86_400_000`
+- `apps/api/src/db/migrations/007_cooldown_24h.sql` (new) — sets table default and updates all existing test rows to 24h
+- `apps/api/src/notifier/dispatch.ts` — fallback cooldown default changed to 24h
+- `apps/web/app/tests/_components/test-editor.tsx` — added `Alert Cooldown (h)` input, validation, and request payload mapping to `cooldown_ms`
+**Decisions:** Kept DB migration authoritative for existing data so behavior changes immediately and uniformly, while schema/UI defaults keep new and edited tests aligned.
+**Deferred:** No dedicated cooldown display on dashboard/detail views yet.
