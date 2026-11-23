@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { buildCtx, FtpRequestError, HttpRequestError, K8sRequestError, S3_LIST_MAX_KEYS, S3RequestError } from './ctx.js'
 import { FTP_MAX_DOWNLOAD_BYTES, FTP_TEMP_DIR } from '../config.js'
+import { boundedLookup, testDispatcher } from './dns-lookup.js'
 
 const { fetchMock } = vi.hoisted(() => ({
   fetchMock: vi.fn(),
@@ -700,7 +701,8 @@ describe('executor ctx k8s', () => {
     expect(init.headers.authorization).toBe('Bearer sa-token')
     expect(init.headers.accept).toBe('application/json')
     expect(init.headers['user-agent']).toContain('Sentinel')
-    expect(init.dispatcher).toBeUndefined()
+    // No CA bundle: the shared test-I/O dispatcher (bounded DNS lookups), no per-bundle Agent.
+    expect(init.dispatcher).toBe(testDispatcher)
     expect(agentMock).not.toHaveBeenCalled()
 
     expect(result).toEqual({ items: [{ metadata: { name: 'nightly' } }], continue: null })
@@ -727,7 +729,7 @@ describe('executor ctx k8s', () => {
     await ctx.k8s.list(server, { ...auth, ca, version: 'v1', resource: 'namespaces' })
 
     expect(agentMock).toHaveBeenCalledTimes(1)
-    expect(agentMock).toHaveBeenCalledWith({ connect: { ca } })
+    expect(agentMock).toHaveBeenCalledWith({ connect: { ca, lookup: boundedLookup } })
     const first = (fetchMock.mock.calls[0]?.[1] as { dispatcher: unknown }).dispatcher
     const second = (fetchMock.mock.calls[1]?.[1] as { dispatcher: unknown }).dispatcher
     expect(first).toBeDefined()
@@ -789,6 +791,8 @@ describe('executor ctx k8s', () => {
     // The cache is module state shared with the other CA test, so start from a fresh module instance.
     vi.resetModules()
     const { buildCtx: freshBuildCtx } = await import('./ctx.js')
+    // The fresh import also builds the shared test-I/O Agent; count only per-bundle ones.
+    agentMock.mockClear()
     const { ctx } = freshBuildCtx()
     const bundle = (i: number) => `-----BEGIN CERTIFICATE-----\nbundle-${i}\n-----END CERTIFICATE-----\n`
 
