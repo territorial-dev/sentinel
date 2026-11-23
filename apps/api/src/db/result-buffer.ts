@@ -102,10 +102,12 @@ export async function drain(): Promise<void> {
   }
 }
 
-/** Connection, resource and shutdown errors: worth retrying later. Anything else is a bad row. */
+/** Connection, resource, timeout and shutdown errors: worth retrying later. Anything else is a bad row. */
 export function isTransientDbError(err: unknown): boolean {
   const code = typeof err === 'object' && err !== null ? (err as { code?: unknown }).code : undefined
   if (typeof code !== 'string' || !/^[0-9A-Z]{5}$/.test(code)) return true
+  // 25P03: the server ended a transaction left idle past idle_in_transaction_session_timeout.
+  if (code === '25P03') return true
   return ['08', '40', '53', '57', '58'].includes(code.slice(0, 2))
 }
 

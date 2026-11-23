@@ -270,6 +270,13 @@ describe('isTransientDbError', () => {
     expect(isTransientDbError(pgError('22P02'))).toBe(false)
     expect(isTransientDbError(Object.assign(new Error('x'), { code: 'ECONNRESET' }))).toBe(true)
   })
+
+  it('retries the pool timeouts instead of dropping the rows', () => {
+    expect(isTransientDbError(new Error('timeout exceeded when trying to connect'))).toBe(true) // connectionTimeoutMillis
+    expect(isTransientDbError(new Error('Query read timeout'))).toBe(true) // query_timeout
+    expect(isTransientDbError(pgError('57014', 'canceling statement due to statement timeout'))).toBe(true)
+    expect(isTransientDbError(pgError('25P03', 'terminating connection due to idle-in-transaction timeout'))).toBe(true)
+  })
 })
 
 describe('test_state upsert', () => {

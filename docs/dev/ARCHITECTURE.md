@@ -63,7 +63,7 @@ Fastify. A global `onRequest` hook checks the bearer JWT on everything except `P
 
 ### Database
 
-- PostgreSQL through `pg`, raw SQL only, pool of at most 5 connections.
+- PostgreSQL through `pg`, raw SQL only, pool of at most 5 connections. Every connect gives up after 10 s and every statement and idle transaction after 60 s (75 s client-side for a dead socket), so no call can hold the result flush forever; the flush requeues on those errors.
 - `test_runs` is partitioned by month; the aggregator keeps current and next partitions ready.
 - **Batched writes.** Results go into an in-memory buffer, flushed every 2 s or at 100 rows, in chunks of 100, one transaction per chunk. A chunk that fails on data isolates the bad row and drops it (logged); only connection errors requeue. The buffer holds at most 5000 rows and drops the oldest beyond that.
 - **State in the same transaction.** The flush upserts `test_state` (last status, failure streak, public status, problem window) and returns each test's transition, then opens, joins or resolves incidents in the same transaction.
