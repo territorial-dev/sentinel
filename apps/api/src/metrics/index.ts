@@ -1,4 +1,4 @@
-import { register, Histogram, Counter } from 'prom-client'
+import { register, Histogram, Counter, Gauge } from 'prom-client'
 import type { TestStatus } from '@sentinel/shared'
 import { isFailure } from '@sentinel/shared'
 
@@ -21,6 +21,16 @@ export const checkSuccessTotal = new Counter({
 export const checkWarningsTotal = new Counter({
   name: 'sentinel_check_warnings_total',
   help: 'Total number of test executions that passed with a warning',
+})
+
+export const resultsDroppedTotal = new Counter({
+  name: 'sentinel_results_dropped_total',
+  help: 'Run results dropped because the result buffer was full (the database was unreachable or writes stalled)',
+})
+
+export const resultBufferRows = new Gauge({
+  name: 'sentinel_result_buffer_rows',
+  help: 'Run results waiting in memory to be written to the database',
 })
 
 export function recordTestResult(status: TestStatus, duration_ms: number): void {

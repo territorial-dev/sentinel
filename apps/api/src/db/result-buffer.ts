@@ -6,7 +6,7 @@ import { logger } from '../logger.js'
 import { pool } from './pool.js'
 import { triggerNotifications } from '../notifier/dispatch.js'
 import { applyIncidentTransitions, type IncidentLink } from './queries/incidents.js'
-import { recordTestResult } from '../metrics/index.js'
+import { recordTestResult, resultBufferRows, resultsDroppedTotal } from '../metrics/index.js'
 import { STATUS_WINDOW_MS } from '../config.js'
 
 const log = logger.child({ component: 'result-buffer' })
@@ -22,6 +22,81 @@ const FAILURE_SQL = FAILURE_STATUSES.map((s) => `'${s}'`).join(',')
 let buffer: RunResult[] = []
 let flusherTimer: ReturnType<typeof setInterval> | null = null
 let inFlight: Promise<void> | null = null
+
+/**
+ * A buffered run older than this means writes are stalled, not just slow: the flusher runs every
+ * 2 s. /health reports it, as it reports drops within DROP_ALERT_WINDOW_MS.
+ */
+export const STALL_AFTER_MS = 120_000
+export const DROP_ALERT_WINDOW_MS = 5 * 60_000
+/** While rows are being dropped, one log line per interval instead of one per dropped run. */
+const DROP_LOG_INTERVAL_MS = 60_000
+
+let droppedTotal = 0
+let lastDropAt: number | null = null
+/** The current drop episode: it starts at the first drop and ends when the buffer next empties. */
+let episode: { startedAt: number; dropped: number; unlogged: number; lastLogAt: number } | null = null
+
+export interface ResultBufferHealth {
+  buffered: number
+  dropped_total: number
+  last_drop_at: string | null
+  oldest_buffered_at: string | null
+  /** The oldest buffered row has waited past STALL_AFTER_MS. */
+  stalled: boolean
+  /** Rows were dropped within DROP_ALERT_WINDOW_MS, or writes are stalled. */
+  degraded: boolean
+}
+
+export function resultBufferHealth(now: number = Date.now()): ResultBufferHealth {
+  const oldest = buffer[0]?.finished_at ?? null
+  const stalled = oldest !== null && now - oldest.getTime() > STALL_AFTER_MS
+  const droppingRecently = lastDropAt !== null && now - lastDropAt < DROP_ALERT_WINDOW_MS
+  return {
+    buffered: buffer.length,
+    dropped_total: droppedTotal,
+    last_drop_at: lastDropAt === null ? null : new Date(lastDropAt).toISOString(),
+    oldest_buffered_at: oldest === null ? null : oldest.toISOString(),
+    stalled,
+    degraded: stalled || droppingRecently,
+  }
+}
+
+function recordDrops(dropped: RunResult[]): void {
+  const now = Date.now()
+  droppedTotal += dropped.length
+  lastDropAt = now
+  resultsDroppedTotal.inc(dropped.length)
+  if (episode === null) {
+    episode = { startedAt: now, dropped: dropped.length, unlogged: 0, lastLogAt: now }
+    log.error(
+      { event: 'result_buffer.overflow', dropped: dropped.length, run_ids: dropped.slice(0, 20).map((r) => r.id) },
+      `result-buffer: buffer over ${MAX_BUFFERED_ROWS} rows, dropping the oldest results until writes catch up`,
+    )
+    return
+  }
+  episode.dropped += dropped.length
+  episode.unlogged += dropped.length
+  if (now - episode.lastLogAt >= DROP_LOG_INTERVAL_MS) {
+    log.error(
+      { event: 'result_buffer.overflow', dropped: episode.unlogged, dropped_in_episode: episode.dropped, since: new Date(episode.startedAt).toISOString() },
+      `result-buffer: still over ${MAX_BUFFERED_ROWS} rows, dropped ${episode.unlogged} more (${episode.dropped} since ${new Date(episode.startedAt).toISOString()})`,
+    )
+    episode.unlogged = 0
+    episode.lastLogAt = now
+  }
+}
+
+/** Ends the drop episode once the buffer has emptied. */
+function noteDrained(): void {
+  resultBufferRows.set(buffer.length)
+  if (episode === null || buffer.length > 0) return
+  log.warn(
+    { event: 'result_buffer.recovered', dropped_in_episode: episode.dropped, since: new Date(episode.startedAt).toISOString() },
+    `result-buffer: writes caught up; ${episode.dropped} result(s) were dropped since ${new Date(episode.startedAt).toISOString()}`,
+  )
+  episode = null
+}
 
 /** One test's state change from a flushed chunk (the latest run of that test in the chunk). */
 export interface StateTransition {
@@ -50,12 +125,10 @@ export function bufferedCount(): number {
 }
 
 function capBuffer(): void {
+  resultBufferRows.set(buffer.length)
   if (buffer.length <= MAX_BUFFERED_ROWS) return
-  const dropped = buffer.splice(0, buffer.length - MAX_BUFFERED_ROWS)
-  log.error(
-    { event: 'result_buffer.overflow', dropped: dropped.length, run_ids: dropped.slice(0, 20).map((r) => r.id) },
-    `result-buffer: buffer over ${MAX_BUFFERED_ROWS} rows, dropped the ${dropped.length} oldest`,
-  )
+  recordDrops(buffer.splice(0, buffer.length - MAX_BUFFERED_ROWS))
+  resultBufferRows.set(buffer.length)
 }
 
 export function startFlusher(): void {
@@ -160,6 +233,7 @@ async function flushOnce(): Promise<void> {
     capBuffer()
     throw transientError
   }
+  noteDrained()
 }
 
 /** Writes runs, assertions and state for one chunk in one transaction; notifies after commit. */

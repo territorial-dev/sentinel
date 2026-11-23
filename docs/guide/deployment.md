@@ -102,7 +102,7 @@ Only the four in the first table are required. Everything else is optional and h
 
 ## Health and metrics
 
-`GET /health` (no auth) runs `SELECT 1` and returns `{ "status": "ok" }`, or `503` with `{ "status": "error", "error": "…" }` when the database is unreachable. Both images use it as their Docker health check.
+`GET /health` (no auth) runs `SELECT 1` and returns `{ "status": "ok", "result_buffer": {…} }`. It returns `503` with `{ "status": "error", "error": "…" }` when the database is unreachable, and `503` with `{ "status": "degraded" }` when Sentinel keeps running tests but is not recording them: run results were dropped in the last 5 minutes, or the oldest result waiting to be written is over 2 minutes old. `result_buffer` gives the counts (`buffered`, `dropped_total`, `last_drop_at`, `oldest_buffered_at`, `stalled`, `degraded`). Both images use it as their Docker health check; the same numbers are on `/metrics` as `sentinel_result_buffer_rows` and `sentinel_results_dropped_total`.
 
 `GET /metrics` (no auth) serves Prometheus text:
 

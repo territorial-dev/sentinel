@@ -65,7 +65,7 @@ Fastify. A global `onRequest` hook checks the bearer JWT on everything except `P
 
 - PostgreSQL through `pg`, raw SQL only, pool of at most 5 connections. Every connect gives up after 10 s and every statement and idle transaction after 60 s (75 s client-side for a dead socket), so no call can hold the result flush forever; the flush requeues on those errors.
 - `test_runs` is partitioned by month; the aggregator keeps current and next partitions ready.
-- **Batched writes.** Results go into an in-memory buffer, flushed every 2 s or at 100 rows, in chunks of 100, one transaction per chunk. A chunk that fails on data isolates the bad row and drops it (logged); only connection errors requeue. The buffer holds at most 5000 rows and drops the oldest beyond that.
+- **Batched writes.** Results go into an in-memory buffer, flushed every 2 s or at 100 rows, in chunks of 100, one transaction per chunk. A chunk that fails on data isolates the bad row and drops it (logged); only connection errors requeue. The buffer holds at most 5000 rows and drops the oldest beyond that, logging once when dropping starts, once a minute while it lasts and once when writes catch up. `/health` turns `503 degraded` while results are dropped or stalled (see Observability).
 - **State in the same transaction.** The flush upserts `test_state` (last status, failure streak, public status, problem window) and returns each test's transition, then opens, joins or resolves incidents in the same transaction.
 - **Daily aggregation** at 00:00 UTC into `uptime_daily` (success, warn and failure counts, average latency), then pruning by retention. See [deployment](../guide/deployment.md#retention-and-background-jobs).
 - **Migrations** are numbered SQL files applied in name order and recorded by name in `schema_migrations`. Upstream uses `001` to `899`; `900` to `999` is reserved for forks ([FORKING.md](../FORKING.md)).
@@ -116,7 +116,7 @@ Auth is the same bearer JWT. Tokens from `POST /auth/mcp-token` carry `sub: 'mcp
 
 ### Observability
 
-Pino JSON logs with an `event` field on every line that matters; `LOG_PRETTY` for terminals. `prom-client` metrics at `/metrics`. `/health` checks the database.
+Pino JSON logs with an `event` field on every line that matters; `LOG_PRETTY` for terminals. `prom-client` metrics at `/metrics`, including `sentinel_result_buffer_rows` and `sentinel_results_dropped_total`. `/health` checks the database and returns `503 degraded` when run results were dropped in the last 5 minutes or the oldest buffered result is over 2 minutes old, so a Sentinel that runs tests without recording them fails its health check.
 
 ## Web app
 
