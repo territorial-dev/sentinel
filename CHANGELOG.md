@@ -1,3 +1,13 @@
+## [1.32.1](https://github.com/territorial-dev/sentinel/compare/v1.32.0...v1.32.1) (2026-11-23)
+
+
+### Bug Fixes
+
+* **api:** fail /health while run results are dropped or not written ([4d6ec39](https://github.com/territorial-dev/sentinel/commit/4d6ec39b87c2c8711ab289f9a260aebbe87097bb))
+* **db:** time out connects, statements and idle transactions ([9cc41a3](https://github.com/territorial-dev/sentinel/commit/9cc41a3a866d2200676083864e6a833c818552e0))
+* **executor:** bound dns lookups of test i/o so a dead resolver cannot starve the process ([59c929a](https://github.com/territorial-dev/sentinel/commit/59c929acfbb87fc400885d6491c79744243a5e60))
+* **executor:** create the test-i/o dispatcher on first use ([b928735](https://github.com/territorial-dev/sentinel/commit/b9287350c0772c0bb07320d925e357a78d02ddbf))
+
 # [1.32.0](https://github.com/territorial-dev/sentinel/compare/v1.31.0...v1.32.0) (2026-11-11)
 
 
