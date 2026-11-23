@@ -702,7 +702,7 @@ describe('executor ctx k8s', () => {
     expect(init.headers.accept).toBe('application/json')
     expect(init.headers['user-agent']).toContain('Sentinel')
     // No CA bundle: the shared test-I/O dispatcher (bounded DNS lookups), no per-bundle Agent.
-    expect(init.dispatcher).toBe(testDispatcher)
+    expect(init.dispatcher).toBe(testDispatcher())
     expect(agentMock).not.toHaveBeenCalled()
 
     expect(result).toEqual({ items: [{ metadata: { name: 'nightly' } }], continue: null })
@@ -791,8 +791,6 @@ describe('executor ctx k8s', () => {
     // The cache is module state shared with the other CA test, so start from a fresh module instance.
     vi.resetModules()
     const { buildCtx: freshBuildCtx } = await import('./ctx.js')
-    // The fresh import also builds the shared test-I/O Agent; count only per-bundle ones.
-    agentMock.mockClear()
     const { ctx } = freshBuildCtx()
     const bundle = (i: number) => `-----BEGIN CERTIFICATE-----\nbundle-${i}\n-----END CERTIFICATE-----\n`
 

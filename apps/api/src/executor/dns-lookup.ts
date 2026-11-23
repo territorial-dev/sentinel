@@ -2,6 +2,7 @@ import { lookup as systemLookup } from 'node:dns'
 import type { LookupAddress, LookupAllOptions, LookupOptions } from 'node:dns'
 import type { LookupFunction } from 'node:net'
 import { Agent } from 'undici'
+import type { Dispatcher } from 'undici'
 
 /**
  * A `lookup` for the sockets of test I/O (ctx.http, ctx.s3, ctx.k8s) that cannot pile up when
@@ -116,5 +117,10 @@ export function setResolverForTests(fn: SystemLookup | null): void {
 /** Connect options every test-I/O dispatcher uses. */
 export const testConnectOptions = { lookup: boundedLookup }
 
-/** The dispatcher for ctx.http and ctx.s3 (ctx.k8s builds its own per CA bundle). */
-export const testDispatcher = new Agent({ connect: testConnectOptions })
+let dispatcher: Dispatcher | null = null
+
+/** The dispatcher for ctx.http and ctx.s3 (ctx.k8s builds its own per CA bundle); made on first use. */
+export function testDispatcher(): Dispatcher {
+  dispatcher ??= new Agent({ connect: testConnectOptions })
+  return dispatcher
+}

@@ -407,7 +407,7 @@ async function doFetch(url: string, init: RequestInit, options: FetchOptions = {
   const signal = combineSignals([sizeController.signal, scope?.runSignal, timeoutSignal, init.signal ?? undefined])
   try {
     // The bounded-lookup dispatcher unless the caller brought its own (ctx.k8s with a CA bundle).
-    const res = await fetch(url, { ...init, dispatcher: init.dispatcher ?? testDispatcher, signal: signal ?? null })
+    const res = await fetch(url, { ...init, dispatcher: init.dispatcher ?? testDispatcher(), signal: signal ?? null })
     if (call) call.headersReceived = true
     // Read the body as a stream (not res.text()) so a timeout can report how far the download got,
     // and stop once it exceeds the shared download cap (same limit as ctx.s3.get and ctx.ftp.get).
@@ -872,7 +872,7 @@ async function doS3Get(
 
   try {
     await mkdir(FTP_TEMP_DIR, { recursive: true })
-    const res = await fetch(url, { method: 'GET', headers: signedHeaders, dispatcher: testDispatcher, signal: signal ?? null })
+    const res = await fetch(url, { method: 'GET', headers: signedHeaders, dispatcher: testDispatcher(), signal: signal ?? null })
     if (call) call.headersReceived = true
     const headers: Record<string, string> = {}
     res.headers.forEach((value, key) => {
