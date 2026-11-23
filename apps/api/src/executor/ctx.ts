@@ -8,6 +8,7 @@ import { nanoid } from 'nanoid'
 import type { AssertionResult } from '@sentinel/shared'
 import { FTP_MAX_DOWNLOAD_BYTES, FTP_TEMP_DIR } from '../config.js'
 import { withSentinelHeaders } from '../outbound-headers.js'
+import { testConnectOptions, testDispatcher } from './dns-lookup.js'
 
 export interface HttpResponse {
   status: number
@@ -405,7 +406,8 @@ async function doFetch(url: string, init: RequestInit, options: FetchOptions = {
   const sizeController = new AbortController()
   const signal = combineSignals([sizeController.signal, scope?.runSignal, timeoutSignal, init.signal ?? undefined])
   try {
-    const res = await fetch(url, { ...init, signal: signal ?? null })
+    // The bounded-lookup dispatcher unless the caller brought its own (ctx.k8s with a CA bundle).
+    const res = await fetch(url, { ...init, dispatcher: init.dispatcher ?? testDispatcher(), signal: signal ?? null })
     if (call) call.headersReceived = true
     // Read the body as a stream (not res.text()) so a timeout can report how far the download got,
     // and stop once it exceeds the shared download cap (same limit as ctx.s3.get and ctx.ftp.get).
@@ -870,7 +872,7 @@ async function doS3Get(
 
   try {
     await mkdir(FTP_TEMP_DIR, { recursive: true })
-    const res = await fetch(url, { method: 'GET', headers: signedHeaders, signal: signal ?? null })
+    const res = await fetch(url, { method: 'GET', headers: signedHeaders, dispatcher: testDispatcher(), signal: signal ?? null })
     if (call) call.headersReceived = true
     const headers: Record<string, string> = {}
     res.headers.forEach((value, key) => {
@@ -936,7 +938,7 @@ function k8sDispatcher(ca: string | undefined): Dispatcher | undefined {
   const cached = k8sAgents.get(ca)
   if (cached !== undefined) return cached
   if (k8sAgents.size >= K8S_AGENT_CACHE_MAX) k8sAgents.clear()
-  const agent = new Agent({ connect: { ca } })
+  const agent = new Agent({ connect: { ...testConnectOptions, ca } })
   k8sAgents.set(ca, agent)
   return agent
 }

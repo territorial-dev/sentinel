@@ -63,9 +63,9 @@ Fastify. A global `onRequest` hook checks the bearer JWT on everything except `P
 
 ### Database
 
-- PostgreSQL through `pg`, raw SQL only, pool of at most 5 connections.
+- PostgreSQL through `pg`, raw SQL only, pool of at most 5 connections. Every connect gives up after 10 s and every statement and idle transaction after 60 s (75 s client-side for a dead socket), so no call can hold the result flush forever; the flush requeues on those errors.
 - `test_runs` is partitioned by month; the aggregator keeps current and next partitions ready.
-- **Batched writes.** Results go into an in-memory buffer, flushed every 2 s or at 100 rows, in chunks of 100, one transaction per chunk. A chunk that fails on data isolates the bad row and drops it (logged); only connection errors requeue. The buffer holds at most 5000 rows and drops the oldest beyond that.
+- **Batched writes.** Results go into an in-memory buffer, flushed every 2 s or at 100 rows, in chunks of 100, one transaction per chunk. A chunk that fails on data isolates the bad row and drops it (logged); only connection errors requeue. The buffer holds at most 5000 rows and drops the oldest beyond that, logging once when dropping starts, once a minute while it lasts and once when writes catch up. `/health` turns `503 degraded` while results are dropped or stalled (see Observability).
 - **State in the same transaction.** The flush upserts `test_state` (last status, failure streak, public status, problem window) and returns each test's transition, then opens, joins or resolves incidents in the same transaction.
 - **Daily aggregation** at 00:00 UTC into `uptime_daily` (success, warn and failure counts, average latency), then pruning by retention. See [deployment](../guide/deployment.md#retention-and-background-jobs).
 - **Migrations** are numbered SQL files applied in name order and recorded by name in `schema_migrations`. Upstream uses `001` to `899`; `900` to `999` is reserved for forks ([FORKING.md](../FORKING.md)).
@@ -84,6 +84,7 @@ Fastify. A global `onRequest` hook checks the bearer JWT on everything except `P
 - A run is `Promise.race` between the function and the test's `timeout_ms`. On timeout the run's `AbortController` aborts every pending `ctx` call and the run records `timeout` with the pending calls named in `error_message`.
 - A run fails when the function throws (a failed `ctx.assert` throws) or returns exactly `false`. `ctx.warn` without a failure makes it `warn`.
 - `ctx` exposes only `http`, `ftp`, `s3`, `k8s`, `secrets`, `assert`, `warn`, `log`, `now`. No filesystem, no `require`, no `process`.
+- Name lookups for `ctx.http`, `ctx.s3` and `ctx.k8s` go through a bounded `lookup` (`executor/dns-lookup.ts`): at most 3 `getaddrinfo` calls at once, one per host shared by every caller, a 10 s give-up per caller and at most 256 pending. A pending `getaddrinfo` cannot be cancelled and runs on libuv's 4-thread pool, so without the bound a resolver that stops answering queues lookups faster than they clear: memory grows and the database driver's own lookups wait behind them, stalling result writes.
 - Outbound HTTP uses undici with per-origin pooling. Bodies are read as streams with a size cap (`FTP_MAX_DOWNLOAD_BYTES`); FTP and S3 downloads stream to a temp file that is deleted before the call returns.
 - S3 requests are signed with SigV4 in `node:crypto`; `ctx.s3.list` parses ListObjectsV2 XML with regexes. Kubernetes reads pin an optional CA through a cached undici `Agent`. No SDKs.
 - `ctx.secrets` is a frozen object from an in-memory cache, decrypted at startup and refreshed on every write, so a run never queries the database or decrypts.
@@ -115,7 +116,7 @@ Auth is the same bearer JWT. Tokens from `POST /auth/mcp-token` carry `sub: 'mcp
 
 ### Observability
 
-Pino JSON logs with an `event` field on every line that matters; `LOG_PRETTY` for terminals. `prom-client` metrics at `/metrics`. `/health` checks the database.
+Pino JSON logs with an `event` field on every line that matters; `LOG_PRETTY` for terminals. `prom-client` metrics at `/metrics`, including `sentinel_result_buffer_rows` and `sentinel_results_dropped_total`. `/health` checks the database and returns `503 degraded` when run results were dropped in the last 5 minutes or the oldest buffered result is over 2 minutes old, so a Sentinel that runs tests without recording them fails its health check.
 
 ## Web app
 

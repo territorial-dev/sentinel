@@ -14,7 +14,7 @@ vi.mock('./pool.js', () => ({
 vi.mock('../notifier/dispatch.js', () => ({ triggerNotifications: vi.fn() }))
 
 import { triggerNotifications } from '../notifier/dispatch.js'
-import { CHUNK_SIZE, MAX_BUFFERED_ROWS, bufferedCount, drain, enqueue, flush, isTransientDbError, startFlusher, stopFlusher } from './result-buffer.js'
+import { CHUNK_SIZE, DROP_ALERT_WINDOW_MS, MAX_BUFFERED_ROWS, STALL_AFTER_MS, bufferedCount, drain, enqueue, flush, isTransientDbError, resultBufferHealth, startFlusher, stopFlusher } from './result-buffer.js'
 import type { RunResult } from '../executor/run.js'
 
 function makeResult(overrides: Partial<RunResult> = {}): RunResult {
@@ -198,6 +198,41 @@ describe('flush', () => {
     expect(bufferedCount()).toBe(0)
   })
 
+  it('reports drops in the buffer health until the alert window passes', async () => {
+    const before = resultBufferHealth().dropped_total
+    clientQuery.mockImplementation((sql: string) =>
+      sql === 'BEGIN' ? Promise.reject(new Error('Connection terminated')) : Promise.resolve({ rows: [] }),
+    )
+    for (let i = 0; i < MAX_BUFFERED_ROWS + 10; i++) enqueue(makeResult({ id: `d${i}`, finished_at: new Date() }))
+    await flush().catch(() => {})
+    await new Promise((r) => setTimeout(r, 0))
+    const during = resultBufferHealth()
+    expect(during.dropped_total - before).toBeGreaterThanOrEqual(10)
+    expect(during.degraded).toBe(true)
+
+    clientQuery.mockImplementation(defaultQuery)
+    await drain()
+    const after = resultBufferHealth()
+    expect(after.buffered).toBe(0)
+    expect(after.degraded).toBe(true) // dropped within the window
+    expect(resultBufferHealth(Date.now() + DROP_ALERT_WINDOW_MS + 1).degraded).toBe(false)
+  })
+
+  it('reports a stalled flush once the oldest buffered row waited past the stall limit', async () => {
+    const held = holdNextQuery()
+    enqueue(makeResult({ id: 'stuck', finished_at: new Date() }))
+    const pending = flush()
+    await held.started
+    enqueue(makeResult({ id: 'behind', finished_at: new Date() }))
+    const now = Date.now()
+    expect(resultBufferHealth(now).stalled).toBe(false)
+    const later = resultBufferHealth(now + STALL_AFTER_MS + 1)
+    expect(later).toMatchObject({ stalled: true, degraded: true, buffered: 1 })
+    held.release()
+    await pending
+    await drain()
+  })
+
   it('skips assertion_results insert when result has no assertions', async () => {
     enqueue(makeResult())
     await flush()
@@ -269,6 +304,13 @@ describe('isTransientDbError', () => {
     expect(isTransientDbError(pgError('23503'))).toBe(false)
     expect(isTransientDbError(pgError('22P02'))).toBe(false)
     expect(isTransientDbError(Object.assign(new Error('x'), { code: 'ECONNRESET' }))).toBe(true)
+  })
+
+  it('retries the pool timeouts instead of dropping the rows', () => {
+    expect(isTransientDbError(new Error('timeout exceeded when trying to connect'))).toBe(true) // connectionTimeoutMillis
+    expect(isTransientDbError(new Error('Query read timeout'))).toBe(true) // query_timeout
+    expect(isTransientDbError(pgError('57014', 'canceling statement due to statement timeout'))).toBe(true)
+    expect(isTransientDbError(pgError('25P03', 'terminating connection due to idle-in-transaction timeout'))).toBe(true)
   })
 })
 
